@@ -15,7 +15,7 @@ src/
     more/             # 테마·정보
     favorites/
   entities/
-    folder/ document/ mark/ review/ app-state/
+    folder/ document/ mark/ review/ app-state/ backup/
   shared/
 ```
 

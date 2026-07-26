@@ -1,4 +1,8 @@
+import { useRef, useState } from 'react'
+
 import { useTheme } from '@/app/ThemeProvider'
+import * as backupRepo from '@/entities/backup/repository'
+import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/lib/cn'
 
 const ACCENT_DOT: Record<string, string> = {
@@ -19,11 +23,53 @@ const THEME_HINT: Record<string, string> = {
 
 export function MorePage() {
   const { theme, setTheme, ids, labels } = useTheme()
+  const importRef = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const exportBackup = async () => {
+    setBusy(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const { fileName, byteSize } = await backupRepo.downloadBackupFile()
+      setMessage(`${fileName} 저장 (${backupRepo.formatBytes(byteSize)})`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '내보내기에 실패했습니다.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const importBackup = async (fileList: FileList | null) => {
+    const file = fileList?.[0]
+    if (importRef.current) importRef.current.value = ''
+    if (!file) return
+
+    const ok = window.confirm(
+      '이 기기의 서재·가림·복습 데이터를 백업 파일 내용으로 모두 바꿉니다. 계속할까요?',
+    )
+    if (!ok) return
+
+    setBusy(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const bundle = await backupRepo.parseBackupFile(file)
+      await backupRepo.restoreBackupBundle(bundle)
+      setMessage('백업을 가져왔습니다. 화면을 새로고침합니다…')
+      window.setTimeout(() => window.location.reload(), 600)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '가져오기에 실패했습니다.')
+      setBusy(false)
+    }
+  }
 
   return (
     <div className="h-full overflow-auto px-5 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <h1 className="text-lg font-bold">더보기</h1>
-      <p className="mt-1 text-sm text-[var(--muted)]">테마와 앱 정보</p>
+      <p className="mt-1 text-sm text-[var(--muted)]">테마 · 백업 · 설치</p>
 
       <section className="mt-8">
         <h2 className="text-xs font-semibold tracking-wide text-[var(--muted)] uppercase">색 테마</h2>
@@ -50,7 +96,35 @@ export function MorePage() {
           ))}
         </div>
         <p className="mt-3 text-xs text-[var(--muted)]">{THEME_HINT[theme]}</p>
-        <p className="mt-1 text-xs text-[var(--muted)]">선택은 이 기기에 저장됩니다.</p>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-xs font-semibold tracking-wide text-[var(--muted)] uppercase">백업</h2>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          PDF·가림·복습 일정을 파일로 저장하거나 복원합니다.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button size="sm" disabled={busy} onClick={() => void exportBackup()}>
+            내보내기
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => importRef.current?.click()}
+          >
+            가져오기
+          </Button>
+          <input
+            ref={importRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => void importBackup(e.target.files)}
+          />
+        </div>
+        {message && <p className="mt-3 text-sm text-[var(--ink)]">{message}</p>}
+        {error && <p className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
       </section>
 
       <section className="mt-10 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--muted)]">
@@ -74,7 +148,7 @@ export function MorePage() {
 
       <section className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--muted)]">
         <p className="font-medium text-[var(--ink)]">암기노트</p>
-        <p className="mt-1">v1.1 · 로컬 전용 · 로그인 없음 · PWA</p>
+        <p className="mt-1">v1.2 · 로컬 전용 · 로그인 없음 · PWA</p>
         <p className="mt-2">내 PDF를 가리고, 잊기 전에 다시 물어봅니다.</p>
       </section>
     </div>
