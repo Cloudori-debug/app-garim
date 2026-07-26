@@ -1,6 +1,8 @@
 import { pdfjs } from 'react-pdf'
 
 import type { PageLayout } from '@/entities/document/types'
+import { PDFJS_DOC_OPTIONS } from '@/shared/lib/setupPdfWorker'
+import '@/shared/lib/setupPdfWorker'
 
 const PORTRAIT_BASE_SCALE = 1.1
 const LANDSCAPE_BOOST = 1.5
@@ -30,7 +32,7 @@ export async function measurePdfPageSize(
   fileUrl: string,
 ): Promise<{ width: number; height: number } | null> {
   try {
-    const pdf = await pdfjs.getDocument({ url: fileUrl }).promise
+    const pdf = await pdfjs.getDocument({ url: fileUrl, ...PDFJS_DOC_OPTIONS }).promise
     const page = await pdf.getPage(1)
     const viewport = page.getViewport({ scale: 1 })
     return { width: viewport.width, height: viewport.height }

@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name app-garim",
     "launch": "node scripts/launch.mjs dev",
     "launch:preview": "node scripts/launch.mjs preview"
   },

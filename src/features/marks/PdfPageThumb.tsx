@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from 'react'
 import { Document, Page } from 'react-pdf'
 
 import { cn } from '@/shared/lib/cn'
+import { PDFJS_DOC_OPTIONS } from '@/shared/lib/setupPdfWorker'
 import '@/shared/lib/setupPdfWorker'
 
 const DEFAULT_WIDTH = 140
@@ -43,7 +44,7 @@ export function PdfPageThumb({
       className={cn('relative mx-auto overflow-hidden bg-white', className)}
       style={{ width }}
     >
-      <Document file={file} loading={null} error={null}>
+      <Document file={file} options={PDFJS_DOC_OPTIONS} loading={null} error={null}>
         <Page
           pageNumber={page}
           width={width}

@@ -1,6 +1,7 @@
 import { PDFDocument } from 'pdf-lib'
 import { pdfjs } from 'react-pdf'
 
+import { PDFJS_DOC_OPTIONS } from '@/shared/lib/setupPdfWorker'
 import '@/shared/lib/setupPdfWorker'
 
 export type SplitProgress = {
@@ -76,7 +77,7 @@ export async function prepareLandscapeSplitPreview(
   assertNotAborted(signal)
   const data = await file.arrayBuffer()
   assertNotAborted(signal)
-  const pdf = await pdfjs.getDocument({ data: data.slice(0) }).promise
+  const pdf = await pdfjs.getDocument({ data: data.slice(0), ...PDFJS_DOC_OPTIONS }).promise
   const pageCount = pdf.numPages
 
   const first = await pdf.getPage(1)
@@ -138,7 +139,7 @@ export async function splitDualPagePdf(
 
   const data = await file.arrayBuffer()
   assertNotAborted(signal)
-  const src = await pdfjs.getDocument({ data: data.slice(0) }).promise
+  const src = await pdfjs.getDocument({ data: data.slice(0), ...PDFJS_DOC_OPTIONS }).promise
   const sourcePageCount = src.numPages
   const out = await PDFDocument.create()
   let outputPages = 0

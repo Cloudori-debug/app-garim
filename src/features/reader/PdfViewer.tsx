@@ -6,6 +6,7 @@ import type { Mark } from '@/entities/mark/types'
 import { MarkOverlay } from '@/features/reader/MarkOverlay'
 import type { ReaderMode } from '@/features/reader/types'
 import '@/shared/lib/setupPdfWorker'
+import { PDFJS_DOC_OPTIONS } from '@/shared/lib/setupPdfWorker'
 
 interface PdfViewerProps {
   fileUrl: string
@@ -208,6 +209,7 @@ export function PdfViewer({
   return (
     <PdfDocument
       file={file}
+      options={PDFJS_DOC_OPTIONS}
       loading={<div className="p-8 text-sm text-neutral-500">PDF 로딩…</div>}
       error={<div className="p-8 text-sm text-red-600">PDF를 열 수 없습니다.</div>}
       onLoadSuccess={(doc) => {

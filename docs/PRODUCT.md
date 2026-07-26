@@ -37,7 +37,8 @@
 
 1. **백업** — 더보기에서 JSON 내보내기 / 가져오기 (교체 복원)
 2. PWA·아이패드 홈 화면 추가 안내
-3. (예정) 한글 PDF cMap · 고정 HTTPS 배포
+3. **한글 PDF cMap** — `/cmaps` · `/standard_fonts` (오프라인 동봉)
+4. **고정 HTTPS 배포** — `npm run deploy` (Cloudflare Pages)
 
 ## Out of Scope (아직)
 

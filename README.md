@@ -8,9 +8,9 @@
 
 공시생 아이패드 사용을 우선합니다. **App Store가 아니라** Safari / 홈 화면 추가(PWA)로 배포합니다.
 
-1. HTTPS로 사이트를 올립니다 → 자세한 절차: [docs/DEPLOY_IPAD.md](./docs/DEPLOY_IPAD.md)
-2. 아이패드 Safari에서 열기 → **공유 → 홈 화면에 추가**
-3. 앱 안 **더보기**에도 설치 안내가 있습니다.
+1. PC에서 한 번: `npx wrangler login` → `npm run deploy`
+2. 나온 `https://….pages.dev` 주소를 아이패드 Safari에서 열기 → **공유 → 홈 화면에 추가**
+3. 자세한 절차: [docs/DEPLOY_IPAD.md](./docs/DEPLOY_IPAD.md)
 
 ## 실행 방법 (가장 쉬움)
 

@@ -3,6 +3,7 @@ import { Document, Page } from 'react-pdf'
 import { Bookmark, EyeOff } from 'lucide-react'
 
 import { cn } from '@/shared/lib/cn'
+import { PDFJS_DOC_OPTIONS } from '@/shared/lib/setupPdfWorker'
 import '@/shared/lib/setupPdfWorker'
 
 const THUMB_WIDTH = 72
@@ -74,7 +75,7 @@ export function PageThumbnailRail({
         책장
       </div>
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-2">
-        <Document file={file} loading={null} error={null}>
+        <Document file={file} options={PDFJS_DOC_OPTIONS} loading={null} error={null}>
           {pages.map((p) => {
             const marksOnPage = markCounts?.[p] ?? 0
             const favorited = favSet.has(p)

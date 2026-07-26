@@ -3,6 +3,8 @@ import { pdfjs } from 'react-pdf'
 
 import * as documentRepo from '@/entities/document/repository'
 import type { Document, PageLayout } from '@/entities/document/types'
+import { PDFJS_DOC_OPTIONS } from '@/shared/lib/setupPdfWorker'
+import '@/shared/lib/setupPdfWorker'
 
 export function useDocuments(folderId: string | null) {
   const [documents, setDocuments] = useState<Document[]>([])
@@ -29,7 +31,7 @@ export function useDocuments(folderId: string | null) {
     async (file: File, pageLayout: PageLayout = 'portrait') => {
       if (!folderId) throw new Error('폴더를 먼저 선택하세요.')
       const data = await file.arrayBuffer()
-      const pdf = await pdfjs.getDocument({ data }).promise
+      const pdf = await pdfjs.getDocument({ data, ...PDFJS_DOC_OPTIONS }).promise
       const pageCount = pdf.numPages
       await documentRepo.addDocument({ folderId, file, pageCount, pageLayout })
       await refresh()

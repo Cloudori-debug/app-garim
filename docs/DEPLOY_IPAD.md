@@ -1,66 +1,86 @@
-# 아이패드 우선 배포 (HTTPS)
+# 아이패드 우선 배포 (고정 HTTPS)
 
-암기노트는 **웹·PWA**입니다. 아이패드에서는 App Store 없이 Safari(또는 홈 화면 아이콘)로 씁니다.  
-**HTTPS**가 필요합니다. (홈 화면 추가·서비스 워커)
+암기노트는 **웹·PWA**입니다. App Store 없이 Safari / 홈 화면 아이콘으로 씁니다.  
+**항상 같은 `https://…` 주소**가 필요합니다.
 
-## 1. 빌드
+## 가장 쉬운 방법: Cloudflare Pages
+
+### 1회 준비
+
+1. [Cloudflare](https://dash.cloudflare.com/) 계정 만들기 (무료)
+2. PC 터미널에서 로그인:
 
 ```bash
-npm install
-npm run build
+npx wrangler login
 ```
 
-결과물: `dist/` 폴더
+브라우저가 열리면 Cloudflare 허용.
 
-## 2. 호스팅 (택 1)
+### 2) 배포 (주소가 고정됨)
 
-### Cloudflare Pages (추천)
+프로젝트 폴더에서:
 
-1. [Cloudflare Pages](https://pages.cloudflare.com/)에서 새 프로젝트
-2. Git 연결 또는 `dist` 직접 업로드
-3. 빌드 설정 (Git 연결 시)
-   - Build command: `npm run build`
-   - Output directory: `dist`
-4. 배포 후 `https://….pages.dev` 주소를 아이패드 Safari로 엽니다.
+```bash
+npm run deploy
+```
 
-`public/_redirects`가 SPA 경로(`/library` 등)를 처리합니다.
+끝나면 터미널에 비슷한 주소가 나옵니다:
+
+```text
+https://app-garim.pages.dev
+```
+
+이 주소가 **고정**입니다. 아이패드 Safari에 북마크하거나 **홈 화면에 추가**하세요.  
+코드를 고친 뒤에도 `npm run deploy`만 다시 하면 같은 주소가 갱신됩니다.
+
+### Git으로 자동 배포 (선택)
+
+1. GitHub에 저장소 올리기
+2. Cloudflare Pages → Create → Git 연결
+3. Build command: `npm run build` / Output: `dist`
+4. 이후 `git push` 할 때마다 자동 배포
+
+`public/_redirects` · `wrangler.toml` 이 이미 포함되어 있습니다.
+
+---
+
+## 다른 호스팅
 
 ### Vercel
 
-1. 저장소를 Vercel에 연결
-2. Framework: Vite, Output: `dist`
-3. `vercel.json` 리라이트가 SPA를 처리합니다.
+저장소 연결 후 Framework: Vite, Output: `dist`  
+`vercel.json` 리라이트가 SPA를 처리합니다.
 
-### 로컬에서 아이패드만 시험 (같은 Wi‑Fi)
-
-PC에서:
+### 로컬 시험만 (같은 Wi‑Fi)
 
 ```bash
 npm run build
 npm run preview -- --host
 ```
 
-터미널에 나온 `http://192.168.x.x:4173` 주소를 아이패드 Safari에 입력합니다.  
-(홈 화면 추가·일부 PWA 기능은 **HTTPS**에서만 완전합니다.)
+`http://192.168.x.x:4173` — **임시**이며 HTTPS가 아니라 홈 화면 추가가 불완전할 수 있습니다.
 
-## 3. 아이패드에 “설치”
+---
 
-1. **Safari**로 HTTPS 주소를 엽니다.
+## 아이패드에 “설치”
+
+1. **Safari**로 `https://….pages.dev` 를 엽니다.
 2. **공유** → **홈 화면에 추가** → 추가
-3. 홈 화면의 **암기노트** 아이콘으로 실행
+3. 홈 화면 **암기노트** 아이콘으로 실행
 
-앱 안 **더보기**에도 같은 안내가 있습니다.
+앱 **더보기**에도 같은 안내가 있습니다.
 
-## 4. 알아둘 점
+## 알아둘 점
 
 | 항목 | 설명 |
 |------|------|
-| 데이터 | PDF·가림은 **그 아이패드 브라우저 저장소**에만 있음 |
-| 백업 | 더보기 → 내보내기 / 가져오기 (JSON). 가져오기는 기기 데이터를 통째로 교체 |
-| 앱스토어 | 이번 단계 범위 밖 (나중에 Capacitor 등) |
+| 데이터 | PDF·가림은 **그 아이패드 브라우저**에만 저장 |
+| 백업 | 더보기 → 내보내기 / 가져오기 |
+| 한글 PDF | cMap 포함 — 일부 한글 교재 글자 깨짐 완화 |
+| 앱스토어 | 이번 단계 범위 밖 |
 
 ## 성공 확인
 
-- [ ] Safari에서 서재 → PDF 추가 → 단어/페이지 가림 → 오늘 복습
-- [ ] 홈 화면 추가 후 전체 화면에 가깝게 실행
-- [ ] 손가락으로 가림 드래그·탭 공개가 가능
+- [ ] 고정 HTTPS 주소로 서재 → PDF → 가림 → 오늘 복습
+- [ ] 홈 화면 추가 후 실행
+- [ ] 한글이 많은 PDF도 페이지가 보임
