@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+@import './shared/styles/themes.css';
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family:
+    'Pretendard',
+    'Noto Sans KR',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}

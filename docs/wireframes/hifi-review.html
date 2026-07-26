@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>암기노트 — 복습 세션 하이파이</title>
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <style>
+    /* Shared neutrals + theme accents. Switch: html[data-theme="…"] */
+    :root,
+    html[data-theme="teal"] {
+      --theme-id: teal;
+      --theme-label: 틸;
+      --bg: #F4F5F7;
+      --surface: #FFFFFF;
+      --ink: #1A1D21;
+      --muted: #6B7280;
+      --border: #E5E7EB;
+      --border-strong: #D1D5DB;
+      --accent: #0F766E;
+      --accent-hover: #0D9488;
+      --accent-soft: #CCFBF1;
+      --mask: #64748B;
+      --mask-label: #F8FAFC;
+      --danger: #B91C1C;
+      --danger-soft: #FEF2F2;
+      --danger-border: #FECACA;
+      --ok: #0F766E;
+      --pdf-bg: #E8EAED;
+      --line-fill: #D1D5DB;
+      --shadow-device: 0 12px 40px rgba(26, 29, 33, 0.10), 0 2px 8px rgba(26, 29, 33, 0.04);
+      --radius-btn: 12px;
+      --radius-device: 22px;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --page-glow: #E2E8F0;
+    }
+
+    html[data-theme="ink"] {
+      --theme-id: ink;
+      --theme-label: 잉크;
+      --accent: #1D4E89;
+      --accent-hover: #2563A8;
+      --accent-soft: #DBEAFE;
+      --ok: #1D4E89;
+      --page-glow: #DBEAFE;
+    }
+
+    html[data-theme="forest"] {
+      --theme-id: forest;
+      --theme-label: 포레스트;
+      --accent: #166534;
+      --accent-hover: #15803D;
+      --accent-soft: #DCFCE7;
+      --ok: #166534;
+      --page-glow: #DCFCE7;
+    }
+
+    html[data-theme="navy"] {
+      --theme-id: navy;
+      --theme-label: 네이비;
+      --accent: #1E3A5F;
+      --accent-hover: #2A4A73;
+      --accent-soft: #E2E8F0;
+      --ok: #1E3A5F;
+      --page-glow: #CBD5E1;
+    }
+
+    html[data-theme="graphite"] {
+      --theme-id: graphite;
+      --theme-label: 그래파이트;
+      --accent: #3F3F46;
+      --accent-hover: #52525B;
+      --accent-soft: #E4E4E7;
+      --ok: #3F3F46;
+      --page-glow: #E4E4E7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+        "Noto Sans KR", "Malgun Gothic", sans-serif;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, var(--page-glow) 0%, transparent 55%),
+        var(--bg);
+      transition: background-color 0.25s var(--ease);
+      color: var(--ink);
+      min-height: 100vh;
+      padding: 36px 24px 72px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    header.page-head {
+      margin-bottom: 28px;
+    }
+
+    header.page-head h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    header.page-head p {
+      margin-top: 6px;
+      font-size: 14px;
+      color: var(--muted);
+      max-width: 52ch;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .swatch {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .swatch i {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      background: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+    }
+
+    /* State / theme bars */
+    .state-bar,
+    .theme-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: fit-content;
+      max-width: 100%;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+
+    .theme-bar { margin-bottom: 28px; }
+
+    .state-bar .label,
+    .theme-bar .label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 0 8px 0 10px;
+      letter-spacing: 0.02em;
+    }
+
+    .state-btn,
+    .theme-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s var(--ease), color 0.15s var(--ease);
+    }
+
+    .state-btn:hover,
+    .theme-btn:hover {
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    .state-btn[aria-pressed="true"],
+    .theme-btn[aria-pressed="true"] {
+      color: var(--surface);
+      background: var(--accent);
+    }
+
+    .theme-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .theme-btn .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--dot, var(--accent));
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
+    }
+
+    .theme-btn[data-theme="teal"] { --dot: #0F766E; }
+    .theme-btn[data-theme="ink"] { --dot: #1D4E89; }
+    .theme-btn[data-theme="forest"] { --dot: #166534; }
+    .theme-btn[data-theme="navy"] { --dot: #1E3A5F; }
+    .theme-btn[data-theme="graphite"] { --dot: #3F3F46; }
+
+    .theme-btn[aria-pressed="true"] .dot {
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35), 0 0 0 1px rgba(0,0,0,0.15);
+    }
+
+    .state-btn:focus-visible,
+    .theme-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* Layout: device + callouts */
+    .stage {
+      display: grid;
+      grid-template-columns: minmax(280px, 380px) 1fr;
+      gap: 36px;
+      align-items: start;
+    }
+
+    @media (max-width: 760px) {
+      .stage { grid-template-columns: 1fr; justify-items: center; }
+      .callouts { width: 100%; max-width: 380px; }
+    }
+
+    /* Tablet device */
+    .device {
+      width: 100%;
+      max-width: 380px;
+      aspect-ratio: 3 / 4;
+      min-height: 520px;
+      background: var(--surface);
+      border-radius: var(--radius-device);
+      border: 1px solid var(--border-strong);
+      box-shadow: var(--shadow-device);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .device::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6);
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .status {
+      height: 28px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+    }
+
+    .status .dots {
+      display: flex;
+      gap: 3px;
+      align-items: center;
+    }
+
+    .status .dots span {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--ink);
+      opacity: 0.35;
+    }
+
+    .status .dots span:last-child {
+      width: 16px;
+      height: 7px;
+      border-radius: 2px;
+      opacity: 0.45;
+    }
+
+    .body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px 12px;
+      flex-shrink: 0;
+    }
+
+    .progress {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+
+    .progress .num {
+      color: var(--accent);
+    }
+
+    .nav-edit {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: default;
+    }
+
+    .reader {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--pdf-bg);
+    }
+
+    .pdf-stage {
+      flex: 1;
+      margin: 0 12px 0;
+      background: var(--surface);
+      border-radius: 6px 6px 0 0;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      min-height: 0;
+    }
+
+    /* Fake PDF content — quiet textbook feel */
+    .pdf-content {
+      position: absolute;
+      inset: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      font-size: 11px;
+      color: #374151;
+      line-height: 1.55;
+      user-select: none;
+    }
+
+    .pdf-chapter {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+
+    .pdf-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      margin-bottom: 14px;
+    }
+
+    .pdf-block {
+      margin-bottom: 12px;
+    }
+
+    .pdf-block p {
+      margin-bottom: 4px;
+      position: relative;
+    }
+
+    .pdf-line {
+      display: block;
+      height: 7px;
+      background: var(--line-fill);
+      border-radius: 2px;
+      opacity: 0.55;
+      margin-bottom: 7px;
+    }
+
+    .pdf-line.w40 { width: 40%; }
+    .pdf-line.w70 { width: 70%; }
+    .pdf-line.w85 { width: 85%; }
+    .pdf-line.w92 { width: 92%; }
+    .pdf-line.w60 { width: 60%; }
+
+    .pdf-text-slot {
+      display: inline;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+    }
+
+    /* Mask overlays */
+    .mask {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: opacity 200ms var(--ease), background 200ms var(--ease),
+        box-shadow 200ms var(--ease), transform 200ms var(--ease);
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .mask.primary {
+      left: 16%;
+      top: 31%;
+      width: 48%;
+      height: 12%;
+      min-height: 36px;
+    }
+
+    .mask.secondary {
+      left: 52%;
+      top: 58%;
+      width: 32%;
+      height: 9%;
+      min-height: 28px;
+      pointer-events: none;
+    }
+
+    /* Hidden state */
+    .mask.is-hidden {
+      background: var(--mask);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+    }
+
+    .mask.is-hidden .mask-glyph {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--mask-label);
+      opacity: 0.85;
+      letter-spacing: 0.02em;
+    }
+
+    .mask.is-hidden .mask-answer {
+      display: none;
+    }
+
+    /* Revealed state */
+    .mask.is-revealed {
+      background: rgba(15, 118, 110, 0.08);
+      box-shadow: inset 0 0 0 1.5px var(--accent);
+    }
+
+    .mask.is-revealed .mask-glyph {
+      display: none;
+    }
+
+    .mask.is-revealed .mask-answer {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.02em;
+      padding: 0 6px;
+      text-align: center;
+    }
+
+    /* Already open secondary mask (context) */
+    .mask.secondary.is-open {
+      background: transparent;
+      box-shadow: inset 0 0 0 1px dashed var(--border-strong);
+    }
+
+    .mask.secondary.is-open .mask-answer {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .mask.secondary.is-open .mask-glyph {
+      display: none;
+    }
+
+    /* Pulse after grade */
+    .mask.is-pulse {
+      animation: highlight-pulse 480ms var(--ease) 1;
+    }
+
+    @keyframes highlight-pulse {
+      0%   { box-shadow: inset 0 0 0 1.5px var(--accent); }
+      35%  { box-shadow: inset 0 0 0 2.5px var(--accent), 0 0 0 6px rgba(15, 118, 110, 0.18); }
+      100% { box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 0 0 rgba(15, 118, 110, 0); }
+    }
+
+    /* Next item fade (state C) */
+    .device[data-state="C"] .pdf-stage {
+      animation: stage-fade 320ms var(--ease) 1;
+    }
+
+    @keyframes stage-fade {
+      0%   { opacity: 0.55; transform: translateY(4px); }
+      100% { opacity: 1; transform: none; }
+    }
+
+    .hint-tap {
+      position: absolute;
+      left: 16%;
+      top: calc(31% + 14%);
+      margin-top: 8px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--accent);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms var(--ease);
+      z-index: 3;
+    }
+
+    .device[data-state="A"] .hint-tap {
+      opacity: 0.9;
+    }
+
+    /* Grade bar — thumb zone */
+    .grade-bar {
+      flex-shrink: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 14px 14px 18px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+
+    .grade {
+      appearance: none;
+      border: none;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      padding: 16px 12px;
+      border-radius: var(--radius-btn);
+      cursor: pointer;
+      transition: background 160ms var(--ease), color 160ms var(--ease),
+        border-color 160ms var(--ease), opacity 160ms var(--ease),
+        transform 120ms var(--ease), box-shadow 160ms var(--ease);
+    }
+
+    .grade:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .grade:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* Disabled / secondary until reveal */
+    .grade:disabled,
+    .grade.is-disabled {
+      cursor: not-allowed;
+      opacity: 1;
+    }
+
+    .grade.bad {
+      background: var(--surface);
+      color: var(--ink);
+      border: 1.5px solid var(--border-strong);
+    }
+
+    .grade.ok {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 1px 2px rgba(15, 118, 110, 0.25);
+    }
+
+    .grade.bad:disabled,
+    .grade.bad.is-disabled {
+      background: var(--bg);
+      color: #9CA3AF;
+      border-color: var(--border);
+      box-shadow: none;
+    }
+
+    .grade.ok:disabled,
+    .grade.ok.is-disabled {
+      background: #99B8B5;
+      color: rgba(255,255,255,0.85);
+      box-shadow: none;
+    }
+
+    .grade.bad:not(:disabled):hover {
+      background: var(--danger-soft);
+      border-color: var(--danger-border);
+      color: var(--danger);
+    }
+
+    .grade.ok:not(:disabled):hover {
+      background: var(--accent-hover);
+    }
+
+    /* State C: brief “graded” feel on OK */
+    .device[data-state="C"] .grade.ok {
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+    }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      bottom: 92px;
+      transform: translateX(-50%) translateY(8px);
+      background: var(--ink);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 999px;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 6;
+      white-space: nowrap;
+      transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+    }
+
+    .device[data-state="C"] .toast {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Callouts */
+    .callouts {
+      padding-top: 8px;
+    }
+
+    .callouts h2 {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 12px;
+    }
+
+    .callout {
+      display: none;
+      animation: fade-in 220ms var(--ease);
+    }
+
+    .callout.is-active {
+      display: block;
+    }
+
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .callout p {
+      font-size: 14px;
+      color: var(--ink);
+      margin-bottom: 10px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .callout ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .callout li {
+      font-size: 13px;
+      color: var(--muted);
+      padding-left: 14px;
+      position: relative;
+    }
+
+    .callout li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 7px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.7;
+    }
+
+    .tokens {
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .tokens h3 {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .token-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+    }
+
+    .token {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .token .chip {
+      width: 100%;
+      height: 20px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .token .name {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .token .val {
+      font-size: 10px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      margin-top: 2px;
+    }
+
+    footer.note {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    footer.note a {
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    footer.note a:hover {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    footer.note code {
+      font-size: 11px;
+      background: #E5E7EB;
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: var(--ink);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-head">
+      <h1>복습 세션 — 하이파이</h1>
+      <p>
+        화면 04 학습·복습 플로우. 쿨 뉴트럴 + accent 테마 교체 가능.
+        상태·테마를 바꿔 가림·채점 인터랙션을 확인합니다.
+      </p>
+      <div class="meta-row">
+        <span class="swatch"><i></i> <span id="accentLabel">Accent · 틸 · #0F766E</span></span>
+        <span>Pretendard / system gothic</span>
+        <span>태블릿 세로 · DESIGN_UX §2.3</span>
+      </div>
+    </header>
+
+    <div class="state-bar" role="tablist" aria-label="복습 상태">
+      <span class="label">상태</span>
+      <button type="button" class="state-btn" role="tab" data-state="A" aria-pressed="true">A · 가림</button>
+      <button type="button" class="state-btn" role="tab" data-state="B" aria-pressed="false">B · 공개</button>
+      <button type="button" class="state-btn" role="tab" data-state="C" aria-pressed="false">C · 채점 후</button>
+    </div>
+
+    <div class="theme-bar" role="tablist" aria-label="색 테마">
+      <span class="label">테마</span>
+      <button type="button" class="theme-btn" data-theme="teal" aria-pressed="true"><span class="dot" aria-hidden="true"></span>틸</button>
+      <button type="button" class="theme-btn" data-theme="ink" aria-pressed="false"><span class="dot" aria-hidden="true"></span>잉크</button>
+      <button type="button" class="theme-btn" data-theme="forest" aria-pressed="false"><span class="dot" aria-hidden="true"></span>포레스트</button>
+      <button type="button" class="theme-btn" data-theme="navy" aria-pressed="false"><span class="dot" aria-hidden="true"></span>네이비</button>
+      <button type="button" class="theme-btn" data-theme="graphite" aria-pressed="false"><span class="dot" aria-hidden="true"></span>그래파이트</button>
+    </div>
+
+    <div class="stage">
+      <div class="device" id="device" data-state="A" aria-label="복습 세션 하이파이 목업">
+        <div class="status">
+          <span>9:41</span>
+          <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+        </div>
+        <div class="body">
+          <div class="nav">
+            <span class="progress" id="progress">복습 <span class="num">3</span>/24</span>
+            <button type="button" class="nav-edit" tabindex="-1">편집</button>
+          </div>
+          <div class="reader">
+            <div class="pdf-stage" id="pdfStage">
+              <div class="pdf-content" aria-hidden="true">
+                <div class="pdf-chapter">제3장 · 기본권</div>
+                <div class="pdf-title">평등권의 내용</div>
+                <div class="pdf-block">
+                  <span class="pdf-line w40"></span>
+                  <span class="pdf-line w92"></span>
+                  <span class="pdf-line w85"></span>
+                </div>
+                <div class="pdf-block">
+                  <span class="pdf-line w70"></span>
+                  <span class="pdf-line w92"></span>
+                  <span class="pdf-line w60"></span>
+                </div>
+                <div class="pdf-block">
+                  <span class="pdf-line w85"></span>
+                  <span class="pdf-line w70"></span>
+                </div>
+              </div>
+
+              <!-- Primary mask (focus) -->
+              <div
+                class="mask primary is-hidden"
+                id="maskPrimary"
+                role="button"
+                tabindex="0"
+                aria-label="가림 탭하여 공개"
+              >
+                <span class="mask-glyph">?</span>
+                <span class="mask-answer">합리적 차별 금지</span>
+              </div>
+
+              <!-- Secondary mask already open (context) -->
+              <div class="mask secondary is-open" aria-hidden="true">
+                <span class="mask-glyph">?</span>
+                <span class="mask-answer">상대적 평등</span>
+              </div>
+
+              <div class="hint-tap">탭하여 공개</div>
+            </div>
+
+            <div class="grade-bar">
+              <button type="button" class="grade bad is-disabled" id="btnBad" disabled>틀림</button>
+              <button type="button" class="grade ok is-disabled" id="btnOk" disabled>알았다</button>
+            </div>
+          </div>
+        </div>
+        <div class="toast" id="toast" aria-live="polite">다음 가림 · 4/24</div>
+      </div>
+
+      <aside class="callouts">
+        <h2>이 상태에서</h2>
+
+        <div class="callout is-active" data-for="A">
+          <p>회상 중 — 가림이 닫혀 있음</p>
+          <ul>
+            <li>활성 가림은 슬레이트 블록 + 「?」</li>
+            <li>채점 버튼은 비활성(실수 채점 방지)</li>
+            <li>하단 엄지 존은 보이되 CTA 아님</li>
+            <li>탭 한 번 → 공개(상태 B)</li>
+          </ul>
+        </div>
+
+        <div class="callout" data-for="B">
+          <p>공개됨 — 채점 가능</p>
+          <ul>
+            <li>가림 opacity 토글 + accent 링</li>
+            <li>정답 텍스트가 가림 자리에 노출</li>
+            <li>틀림 / 알았다 활성화 (알았다 = accent fill)</li>
+            <li>채점 전엔 다시 탭해 가릴 수 있음</li>
+          </ul>
+        </div>
+
+        <div class="callout" data-for="C">
+          <p>채점 직후 — 다음으로</p>
+          <ul>
+            <li>하이라이트 펄스 1회 (시선 유도)</li>
+            <li>짧은 페이드로 다음 큐(4/24) 느낌</li>
+            <li>장식 컨페티·치어업 없음</li>
+            <li>모션 예산: fade + pulse만</li>
+          </ul>
+        </div>
+
+        <div class="tokens">
+          <h3>컬러 토큰 <span id="tokenThemeName" style="font-weight:500;color:var(--muted)">(틸)</span></h3>
+          <div class="token-grid">
+            <div class="token">
+              <div class="chip" style="background:var(--bg);border:1px solid var(--border)"></div>
+              <div class="name">bg</div>
+              <div class="val" data-token="bg"></div>
+            </div>
+            <div class="token">
+              <div class="chip" style="background:var(--accent)"></div>
+              <div class="name">accent</div>
+              <div class="val" data-token="accent"></div>
+            </div>
+            <div class="token">
+              <div class="chip" style="background:var(--mask)"></div>
+              <div class="name">mask</div>
+              <div class="val" data-token="mask"></div>
+            </div>
+            <div class="token">
+              <div class="chip" style="background:var(--ink)"></div>
+              <div class="name">ink</div>
+              <div class="val" data-token="ink"></div>
+            </div>
+            <div class="token">
+              <div class="chip" style="background:var(--danger)"></div>
+              <div class="name">danger</div>
+              <div class="val" data-token="danger"></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="note">
+      파일: <code>docs/wireframes/hifi-review.html</code>
+      · <a href="./index.html">와이어 4장으로</a>
+      · DESIGN_UX.md §7 단계 3
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var THEMES = {
+        teal: { label: "틸", accent: "#0F766E" },
+        ink: { label: "잉크", accent: "#1D4E89" },
+        forest: { label: "포레스트", accent: "#166534" },
+        navy: { label: "네이비", accent: "#1E3A5F" },
+        graphite: { label: "그래파이트", accent: "#3F3F46" }
+      };
+
+      var device = document.getElementById("device");
+      var mask = document.getElementById("maskPrimary");
+      var btnBad = document.getElementById("btnBad");
+      var btnOk = document.getElementById("btnOk");
+      var progress = document.getElementById("progress");
+      var stateBtns = document.querySelectorAll(".state-btn");
+      var themeBtns = document.querySelectorAll(".theme-btn");
+      var callouts = document.querySelectorAll(".callout");
+      var accentLabel = document.getElementById("accentLabel");
+      var tokenThemeName = document.getElementById("tokenThemeName");
+
+      function setTheme(id) {
+        if (!THEMES[id]) id = "teal";
+        document.documentElement.setAttribute("data-theme", id);
+        try { localStorage.setItem("amgi-theme", id); } catch (e) {}
+
+        themeBtns.forEach(function (btn) {
+          btn.setAttribute("aria-pressed", btn.getAttribute("data-theme") === id ? "true" : "false");
+        });
+
+        var t = THEMES[id];
+        accentLabel.textContent = "Accent · " + t.label + " · " + t.accent;
+        tokenThemeName.textContent = "(" + t.label + ")";
+        syncTokenVals();
+      }
+
+      function syncTokenVals() {
+        var styles = getComputedStyle(document.documentElement);
+        document.querySelectorAll("[data-token]").forEach(function (el) {
+          var raw = styles.getPropertyValue("--" + el.getAttribute("data-token")).trim();
+          el.textContent = raw.toUpperCase();
+        });
+      }
+
+      function setState(state) {
+        device.setAttribute("data-state", state);
+
+        stateBtns.forEach(function (btn) {
+          btn.setAttribute("aria-pressed", btn.getAttribute("data-state") === state ? "true" : "false");
+        });
+
+        callouts.forEach(function (c) {
+          c.classList.toggle("is-active", c.getAttribute("data-for") === state);
+        });
+
+        mask.classList.remove("is-hidden", "is-revealed", "is-pulse");
+
+        if (state === "A") {
+          mask.classList.add("is-hidden");
+          setGrades(false);
+          progress.innerHTML = '복습 <span class="num">3</span>/24';
+          mask.setAttribute("aria-label", "가림 탭하여 공개");
+        } else if (state === "B") {
+          mask.classList.add("is-revealed");
+          setGrades(true);
+          progress.innerHTML = '복습 <span class="num">3</span>/24';
+          mask.setAttribute("aria-label", "가림 탭하여 다시 가리기");
+        } else {
+          mask.classList.add("is-revealed", "is-pulse");
+          setGrades(true);
+          progress.innerHTML = '복습 <span class="num">4</span>/24';
+          mask.setAttribute("aria-label", "다음 가림");
+          void mask.offsetWidth;
+          mask.classList.remove("is-pulse");
+          void mask.offsetWidth;
+          mask.classList.add("is-pulse");
+        }
+      }
+
+      function setGrades(enabled) {
+        [btnBad, btnOk].forEach(function (btn) {
+          btn.disabled = !enabled;
+          btn.classList.toggle("is-disabled", !enabled);
+        });
+      }
+
+      stateBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          setState(btn.getAttribute("data-state"));
+        });
+      });
+
+      themeBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          setTheme(btn.getAttribute("data-theme"));
+        });
+      });
+
+      function toggleMask() {
+        var cur = device.getAttribute("data-state");
+        if (cur === "A") setState("B");
+        else if (cur === "B") setState("A");
+      }
+
+      mask.addEventListener("click", toggleMask);
+      mask.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggleMask();
+        }
+      });
+
+      btnOk.addEventListener("click", function () {
+        if (!btnOk.disabled) setState("C");
+      });
+
+      btnBad.addEventListener("click", function () {
+        if (!btnBad.disabled) setState("C");
+      });
+
+      var saved = null;
+      try { saved = localStorage.getItem("amgi-theme"); } catch (e) {}
+      setTheme(saved && THEMES[saved] ? saved : "teal");
+      setState("A");
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+/**
+ * 암기노트 색 테마 5종
+ * html[data-theme="default|dark|rose|focus|paper"]
+ */
+:root,
+html[data-theme='default'] {
+  color-scheme: light;
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --ink: #1a1d21;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --accent: #0f766e;
+  --accent-hover: #0d9488;
+  --accent-soft: #ccfbf1;
+  --mask: #64748b;
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --ok: #0f766e;
+  --pdf-bg: #e8eaed;
+}
+
+/** OLED 절전·잔상 완화 */
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface: #121212;
+  --ink: #e8eaed;
+  --muted: #9ca3af;
+  --border: #27272a;
+  --border-strong: #3f3f46;
+  --accent: #2dd4bf;
+  --accent-hover: #5eead4;
+  --accent-soft: #134e4a;
+  --mask: #94a3b8;
+  --danger: #f87171;
+  --danger-soft: #450a0a;
+  --ok: #2dd4bf;
+  --pdf-bg: #0a0a0a;
+}
+
+/** 로즈 — 조화·부드러움 (저대비) */
+html[data-theme='rose'] {
+  color-scheme: light;
+  --bg: #fbf7f8;
+  --surface: #ffffff;
+  --ink: #3d2c33;
+  --muted: #8a6f7a;
+  --border: #ede0e4;
+  --border-strong: #e0c8d0;
+  --accent: #c45c7a;
+  --accent-hover: #b04e6c;
+  --accent-soft: #f8e4ea;
+  --mask: #a78a96;
+  --danger: #b91c1c;
+  --danger-soft: #fdf2f4;
+  --ok: #c45c7a;
+  --pdf-bg: #f3ecef;
+}
+
+/** 포커스 — 대비·집중 (쿨·고대비) */
+html[data-theme='focus'] {
+  color-scheme: light;
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --ink: #111827;
+  --muted: #4b5563;
+  --border: #cbd5e1;
+  --border-strong: #94a3b8;
+  --accent: #1e3a5f;
+  --accent-hover: #2563eb;
+  --accent-soft: #dbeafe;
+  --mask: #64748b;
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --ok: #1e3a5f;
+  --pdf-bg: #e2e8f0;
+}
+
+/** 페이퍼 — 장시간·저자극 (웜 종이톤) */
+html[data-theme='paper'] {
+  color-scheme: light;
+  --bg: #f5f0e8;
+  --surface: #faf7f2;
+  --ink: #3f3a34;
+  --muted: #7a7268;
+  --border: #e0d6c8;
+  --border-strong: #cfc3b2;
+  --accent: #6b7f5a;
+  --accent-hover: #5a6e4a;
+  --accent-soft: #e8ede3;
+  --mask: #8a857c;
+  --danger: #9f1239;
+  --danger-soft: #fdf4f0;
+  --ok: #6b7f5a;
+  --pdf-bg: #ebe4d8;
+}

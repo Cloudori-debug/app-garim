@@ -1,0 +1,55 @@
+/**
+ * 암기노트 색 테마 토큰
+ * 사용: <html data-theme="teal|ink|forest|navy|graphite">
+ * 기본: teal · 저장 키 예: localStorage['amgi-theme']
+ * 문서: docs/DESIGN_UX.md §2.3
+ */
+
+:root,
+html[data-theme="teal"] {
+  --bg: #F4F5F7;
+  --surface: #FFFFFF;
+  --ink: #1A1D21;
+  --muted: #6B7280;
+  --border: #E5E7EB;
+  --border-strong: #D1D5DB;
+  --accent: #0F766E;
+  --accent-hover: #0D9488;
+  --accent-soft: #CCFBF1;
+  --mask: #64748B;
+  --mask-label: #F8FAFC;
+  --danger: #B91C1C;
+  --danger-soft: #FEF2F2;
+  --danger-border: #FECACA;
+  --ok: #0F766E;
+  --pdf-bg: #E8EAED;
+  --line-fill: #D1D5DB;
+}
+
+html[data-theme="ink"] {
+  --accent: #1D4E89;
+  --accent-hover: #2563A8;
+  --accent-soft: #DBEAFE;
+  --ok: #1D4E89;
+}
+
+html[data-theme="forest"] {
+  --accent: #166534;
+  --accent-hover: #15803D;
+  --accent-soft: #DCFCE7;
+  --ok: #166534;
+}
+
+html[data-theme="navy"] {
+  --accent: #1E3A5F;
+  --accent-hover: #2A4A73;
+  --accent-soft: #E2E8F0;
+  --ok: #1E3A5F;
+}
+
+html[data-theme="graphite"] {
+  --accent: #3F3F46;
+  --accent-hover: #52525B;
+  --accent-soft: #E4E4E7;
+  --ok: #3F3F46;
+}

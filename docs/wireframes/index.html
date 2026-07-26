@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>암기노트 — 와이어프레임 4장</title>
+  <style>
+    :root {
+      --line: #2a2a2a;
+      --line-soft: #9a9a9a;
+      --fill: #d4d4d4;
+      --fill-soft: #ececec;
+      --bg: #f0f0f0;
+      --paper: #fff;
+      --ink: #111;
+      --muted: #666;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      padding: 32px 24px 64px;
+      line-height: 1.4;
+    }
+
+    header.page {
+      max-width: 1280px;
+      margin: 0 auto 28px;
+    }
+
+    header.page h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    header.page p {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 20px;
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-right: 6px;
+      vertical-align: -1px;
+      border: 1px solid var(--line);
+    }
+
+    .legend .box::before { background: var(--fill-soft); }
+    .legend .mask::before { background: var(--fill); }
+    .legend .cta::before { background: var(--ink); }
+
+    .grid {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 28px;
+    }
+
+    @media (max-width: 1100px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 640px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .frame-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .frame-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .frame-label strong {
+      color: var(--ink);
+      font-size: 14px;
+      letter-spacing: -0.02em;
+      text-transform: none;
+      margin-right: 6px;
+    }
+
+    /* Tablet portrait wire */
+    .device {
+      background: var(--paper);
+      border: 2px solid var(--line);
+      border-radius: 18px;
+      aspect-ratio: 3 / 4;
+      min-height: 480px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    }
+
+    .status {
+      height: 22px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--fill);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      color: var(--line-soft);
+      letter-spacing: 0.02em;
+    }
+
+    .body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      position: relative;
+    }
+
+    .tabbar {
+      flex-shrink: 0;
+      height: 52px;
+      border-top: 2px solid var(--line);
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      background: var(--paper);
+    }
+
+    .tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 10px;
+      color: var(--line-soft);
+      border-right: 1px solid var(--fill);
+    }
+
+    .tab:last-child { border-right: none; }
+
+    .tab.active {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .tab .ico {
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid currentColor;
+      border-radius: 3px;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--fill);
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .nav .brand { font-weight: 700; font-size: 13px; }
+    .nav .ghost {
+      border: 1px solid var(--line-soft);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .nav .link {
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    /* —— 오늘 —— */
+    .today-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      text-align: center;
+      gap: 8px;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+
+    .big-num {
+      font-size: 72px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin: 4px 0 12px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--ink);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 12px 28px;
+      border-radius: 8px;
+      min-width: 160px;
+    }
+
+    .subject-row {
+      margin-top: 28px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    .chip {
+      border: 1px solid var(--line-soft);
+      border-radius: 999px;
+      padding: 4px 10px;
+      color: var(--ink);
+    }
+
+    .anno {
+      position: absolute;
+      font-size: 9px;
+      color: #c00;
+      font-weight: 600;
+      pointer-events: none;
+    }
+
+    /* —— 서재 —— */
+    .library {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+
+    .subjects {
+      width: 88px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--fill);
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: var(--fill-soft);
+    }
+
+    .subj {
+      font-size: 10px;
+      padding: 8px 6px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .subj.on {
+      background: var(--paper);
+      border-color: var(--line);
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .docs {
+      flex: 1;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .docs-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+
+    .btn-outline {
+      border: 1.5px solid var(--line);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .doc {
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: var(--paper);
+    }
+
+    .doc .name {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .doc .meta {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* —— 리더 공통 —— */
+    .reader {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: #e8e8e8;
+    }
+
+    .toolbar {
+      flex-shrink: 0;
+      display: flex;
+      gap: 6px;
+      padding: 8px 10px;
+      background: var(--paper);
+      border-bottom: 1px solid var(--fill);
+    }
+
+    .tool {
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-size: 10px;
+      font-weight: 600;
+      background: var(--fill-soft);
+    }
+
+    .tool.on {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+    }
+
+    .pdf-stage {
+      flex: 1;
+      margin: 10px 12px;
+      background: var(--paper);
+      border: 1.5px solid var(--line);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 1px 0 var(--fill);
+    }
+
+    .pdf-lines {
+      position: absolute;
+      inset: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .pdf-lines i {
+      display: block;
+      height: 6px;
+      background: var(--fill);
+      border-radius: 1px;
+    }
+
+    .pdf-lines i:nth-child(1) { width: 40%; height: 10px; background: var(--fill); }
+    .pdf-lines i:nth-child(2) { width: 92%; }
+    .pdf-lines i:nth-child(3) { width: 88%; }
+    .pdf-lines i:nth-child(4) { width: 70%; }
+    .pdf-lines i:nth-child(5) { width: 90%; margin-top: 10px; }
+    .pdf-lines i:nth-child(6) { width: 85%; }
+    .pdf-lines i:nth-child(7) { width: 78%; }
+    .pdf-lines i:nth-child(8) { width: 88%; margin-top: 10px; }
+    .pdf-lines i:nth-child(9) { width: 60%; }
+
+    .mask-box {
+      position: absolute;
+      background: var(--fill);
+      border: 2px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .mask-box.selected {
+      outline: 2px solid var(--ink);
+      outline-offset: 2px;
+    }
+
+    .mask-box .handle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: var(--paper);
+      border: 1.5px solid var(--line);
+      right: -5px;
+      bottom: -5px;
+    }
+
+    .page-nav {
+      flex-shrink: 0;
+      text-align: center;
+      padding: 8px;
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--paper);
+      border-top: 1px solid var(--fill);
+    }
+
+    .grade-bar {
+      flex-shrink: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 12px 14px 14px;
+      background: var(--paper);
+      border-top: 2px solid var(--line);
+    }
+
+    .grade {
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      padding: 14px 8px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .grade.ok {
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .grade.bad {
+      background: var(--paper);
+    }
+
+    .progress {
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .note {
+      max-width: 1280px;
+      margin: 36px auto 0;
+      font-size: 12px;
+      color: var(--muted);
+      border-top: 1px solid #ccc;
+      padding-top: 16px;
+    }
+
+    .note code {
+      font-size: 11px;
+      background: #e5e5e5;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <header class="page">
+    <h1>암기노트 — 와이어프레임 4장</h1>
+    <p>레이아웃·위계만. 색·브랜드 톤 없음 · 태블릿 세로 기준 · DESIGN_UX.md §5</p>
+    <div class="legend">
+      <span class="box">콘텐츠 / PDF 영역</span>
+      <span class="mask">가림막</span>
+      <span class="cta">주요 CTA (검정 블록)</span>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- 1. 오늘 -->
+    <div class="frame-wrap">
+      <div class="frame-label"><strong>01 오늘</strong> 기본 진입 · 숫자 + 시작</div>
+      <div class="device" aria-label="오늘 화면 와이어">
+        <div class="status">상태바</div>
+        <div class="body">
+          <div class="nav">
+            <span class="brand">암기노트</span>
+            <span class="ghost">더보기</span>
+          </div>
+          <div class="today-main">
+            <div class="eyebrow">오늘 복습</div>
+            <div class="big-num">24</div>
+            <div class="btn-primary">복습 시작</div>
+            <div class="subject-row">
+              <span class="chip">한국사 12</span>
+              <span class="chip">행정학 8</span>
+              <span class="chip">영어 4</span>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab active"><div class="ico"></div>오늘</div>
+            <div class="tab"><div class="ico"></div>서재</div>
+            <div class="tab"><div class="ico"></div>더보기</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 서재 -->
+    <div class="frame-wrap">
+      <div class="frame-label"><strong>02 서재</strong> 과목 · 문서 · 가져오기</div>
+      <div class="device" aria-label="서재 화면 와이어">
+        <div class="status">상태바</div>
+        <div class="body">
+          <div class="nav">
+            <span class="brand">서재</span>
+            <span class="btn-outline">+ 가져오기</span>
+          </div>
+          <div class="library">
+            <aside class="subjects">
+              <div class="subj on">한국사</div>
+              <div class="subj">행정학</div>
+              <div class="subj">영어</div>
+              <div class="subj">+ 과목</div>
+            </aside>
+            <div class="docs">
+              <div class="docs-head">
+                <span>문서 3</span>
+                <span style="color:var(--muted)">가림 많은순</span>
+              </div>
+              <div class="doc">
+                <div class="name">전한길 요약_헌법.pdf</div>
+                <div class="meta">가림 48 · 어제 학습</div>
+              </div>
+              <div class="doc">
+                <div class="name">기출선지_근현대.pdf</div>
+                <div class="meta">가림 22 · 3일 전</div>
+              </div>
+              <div class="doc">
+                <div class="name">암기카드_사진.jpg</div>
+                <div class="meta">가림 6 · —</div>
+              </div>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab"><div class="ico"></div>오늘</div>
+            <div class="tab active"><div class="ico"></div>서재</div>
+            <div class="tab"><div class="ico"></div>더보기</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 편집 -->
+    <div class="frame-wrap">
+      <div class="frame-label"><strong>03 리더 · 편집</strong> PDF 80% · 얇은 툴바</div>
+      <div class="device" aria-label="편집 모드 와이어">
+        <div class="status">상태바</div>
+        <div class="body">
+          <div class="nav">
+            <span style="font-size:11px;font-weight:600;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">전한길 요약_헌법</span>
+            <span class="link">학습으로</span>
+          </div>
+          <div class="reader">
+            <div class="toolbar">
+              <span class="tool on">가림</span>
+              <span class="tool">색</span>
+              <span class="tool">삭제</span>
+              <span class="tool">⋯</span>
+            </div>
+            <div class="pdf-stage">
+              <div class="pdf-lines">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <div class="mask-box selected" style="left:18%;top:28%;width:42%;height:14%;">
+                가림
+                <span class="handle"></span>
+              </div>
+              <div class="mask-box" style="left:55%;top:52%;width:28%;height:10%;">가림</div>
+            </div>
+            <div class="page-nav">‹ &nbsp; 12 / 40 &nbsp; ›</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 학습 -->
+    <div class="frame-wrap">
+      <div class="frame-label"><strong>04 학습 · 복습</strong> 탭 회상 · 하단 채점</div>
+      <div class="device" aria-label="학습 모드 와이어">
+        <div class="status">상태바</div>
+        <div class="body">
+          <div class="nav">
+            <span class="progress">복습 3 / 24</span>
+            <span class="ghost">편집</span>
+          </div>
+          <div class="reader">
+            <div class="pdf-stage" style="margin-bottom:0;">
+              <div class="pdf-lines">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <div class="mask-box" style="left:18%;top:28%;width:42%;height:14%;opacity:0.95;">?</div>
+              <div class="mask-box" style="left:55%;top:52%;width:28%;height:10%;background:#bbb;border-style:dashed;">열림</div>
+            </div>
+            <div class="grade-bar">
+              <div class="grade bad">틀림</div>
+              <div class="grade ok">알았다</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="note">
+    파일: <code>docs/wireframes/index.html</code> · 브라우저에서 열어 확인.
+    하이파이: <a href="./hifi-review.html" style="color:inherit;font-weight:600;">04 복습 세션 (hifi-review.html)</a>
+    · 다음: 인터랙션 스펙 또는 빈 오늘(0개) / 첫 실행 와이어.
+  </p>
+</body>
+</html>
