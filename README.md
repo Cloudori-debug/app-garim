@@ -4,6 +4,13 @@
 
 프로젝트 폴더/패키지 이름: `app_garim` · 제품명: 암기노트
 
+## 아이패드에서 쓰기
+
+공시생 아이패드 사용을 우선합니다. **App Store가 아니라** Safari / 홈 화면 추가(PWA)로 배포합니다.
+
+1. HTTPS로 사이트를 올립니다 → 자세한 절차: [docs/DEPLOY_IPAD.md](./docs/DEPLOY_IPAD.md)
+2. 아이패드 Safari에서 열기 → **공유 → 홈 화면에 추가**
+3. 앱 안 **더보기**에도 설치 안내가 있습니다.
 
 ## 실행 방법 (가장 쉬움)
 
@@ -19,8 +26,15 @@
 | `실행.bat` | 평소 실행 (개발 서버) |
 | `실행(오프라인).bat` | 빌드 후 오프라인 미리보기 |
 
-> 진짜 Windows `.exe` 설치 프로그램은 아직 없습니다.  
-> 지금은 **더블클릭용 `실행.bat`** 이 실행 파일 역할을 합니다.
+같은 Wi‑Fi의 아이패드로 PC 미리보기를 보려면:
+
+```bash
+npm run build
+npm run preview -- --host
+```
+
+> 진짜 Windows `.exe` / App Store 앱은 아직 없습니다.  
+> 지금은 **웹·PWA**가 배포 형태입니다.
 
 ## 터미널로 실행
 
@@ -42,7 +56,8 @@ npm run preview
 |------|------|
 | [docs/PRODUCT.md](./docs/PRODUCT.md) | 제품 정의 · In/Out |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 폴더 · 데이터 · 라우트 |
-| [docs/ROADMAP.md](./docs/ROADMAP.md) | 버전 계획 |
+| [docs/ROADMAP.md](./docs/ROADMAP.md) | 버전 테이블 |
+| [docs/DEPLOY_IPAD.md](./docs/DEPLOY_IPAD.md) | 아이패드 HTTPS·PWA 배포 |
 
 디자인·기획 참고: `docs/DESIGN_UX.md`, `docs/PRODUCT_CONCEPT.md`, `docs/wireframes/`
 
@@ -51,9 +66,9 @@ npm run preview
 ```text
 오늘 → 복습 시작 → 탭 공개 → 틀림/알았다
 서재 → PDF → 편집(가림) → 학습
-더보기 → 색 테마
+더보기 → 색 테마 · 아이패드 설치 안내
 ```
 
 ## 스택
 
-React · TypeScript · Vite · Tailwind · Dexie · react-pdf · React Router
+React · TypeScript · Vite · Tailwind · Dexie · react-pdf · React Router · PWA

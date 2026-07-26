@@ -5,6 +5,11 @@ html,
 body,
 #root {
   height: 100%;
+  height: 100dvh;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -18,4 +23,18 @@ body {
   background: var(--bg);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
+  /* 아이패드 터치: 탭 하이라이트·콜아웃 완화 */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+#root {
+  isolation: isolate;
+}
+
+/* 손가락 탭 영역 최소 44px 보조 */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
 }

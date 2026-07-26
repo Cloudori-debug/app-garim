@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { BookOpen, CalendarDays, EyeOff, Settings } from 'lucide-react'
 
 import { cn } from '@/shared/lib/cn'
@@ -11,36 +11,49 @@ const tabs = [
 ] as const
 
 export function AppShell() {
+  const { pathname } = useLocation()
+  const hideTabBar = pathname.startsWith('/read/')
+
   return (
     <div className="flex h-full flex-col bg-[var(--bg)] text-[var(--ink)]">
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div
+        className={cn(
+          'min-h-0 flex-1 overflow-hidden',
+          hideTabBar && 'pt-[env(safe-area-inset-top)]',
+        )}
+      >
         <Outlet />
       </div>
-      <nav className="grid shrink-0 grid-cols-4 border-t-2 border-[var(--ink)] bg-[var(--surface)]">
-        {tabs.map(({ to, end, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              cn(
-                'flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium text-[var(--muted)]',
-                isActive && 'font-bold text-[var(--ink)]',
-              )
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <Icon
-                  className={cn('h-4 w-4', isActive && 'text-[var(--accent)]')}
-                  strokeWidth={isActive ? 2.5 : 2}
-                />
-                {label}
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
+      {!hideTabBar && (
+        <nav
+          className="grid shrink-0 grid-cols-4 border-t-2 border-[var(--ink)] bg-[var(--surface)] pb-[env(safe-area-inset-bottom)]"
+          aria-label="주요 메뉴"
+        >
+          {tabs.map(({ to, end, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                cn(
+                  'touch-target flex flex-col items-center justify-center gap-0.5 py-2.5 text-[11px] font-medium text-[var(--muted)]',
+                  isActive && 'font-bold text-[var(--ink)]',
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon
+                    className={cn('h-5 w-5', isActive && 'text-[var(--accent)]')}
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
+                  {label}
+                </>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+      )}
     </div>
   )
 }

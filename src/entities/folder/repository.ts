@@ -20,18 +20,28 @@ export async function listFolders(): Promise<Folder[]> {
   return all.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
 }
 
+/** 폴더가 하나도 없으면 기본 폴더를 만들어 첫 PDF 추가가 가능하게 함 */
+export async function ensureDefaultFolder(): Promise<Folder> {
+  const existing = await listFolders()
+  if (existing.length > 0) {
+    return existing.find((f) => f.parentId === null) ?? existing[0]!
+  }
+  return createFolder('내 서재', null)
+}
+
 export async function createFolder(name: string, parentId: string | null = null): Promise<Folder> {
   const depth = await folderDepth(parentId)
   if (depth >= MAX_DEPTH) {
     throw new Error(`폴더는 최대 ${MAX_DEPTH}단까지 가능합니다.`)
   }
   const sameParent = (await db.folders.toArray()).filter((f) => f.parentId === parentId)
+  const maxOrder = sameParent.reduce((m, f) => Math.max(m, f.sortOrder), 0)
   const now = nowIso()
   const folder: Folder = {
     id: createId(),
     parentId,
     name: name.trim() || '새 폴더',
-    sortOrder: Math.max(0, ...sameParent.map((f) => f.sortOrder)) + 1,
+    sortOrder: maxOrder + 1,
     createdAt: now,
     updatedAt: now,
   }
@@ -81,9 +91,10 @@ export async function moveFolder(id: string, newParentId: string | null): Promis
   const sameParent = (await db.folders.toArray()).filter(
     (f) => f.parentId === newParentId && f.id !== id,
   )
+  const maxOrder = sameParent.reduce((m, f) => Math.max(m, f.sortOrder), 0)
   await db.folders.update(id, {
     parentId: newParentId,
-    sortOrder: Math.max(0, ...sameParent.map((f) => f.sortOrder)) + 1,
+    sortOrder: maxOrder + 1,
     updatedAt: nowIso(),
   })
 }

@@ -135,6 +135,14 @@ export function LibraryPage() {
     return () => window.clearTimeout(t)
   }, [createOpen])
 
+  /** 첫 방문: 기본 폴더가 있으면 자동 선택 → PDF 추가 가능 */
+  useEffect(() => {
+    if (selectedFolderId) return
+    if (folders.length === 0) return
+    const root = folders.find((f) => f.parentId === null) ?? folders[0]
+    if (root) setSelectedFolderId(root.id)
+  }, [folders, selectedFolderId])
+
   const leaveEditModeClean = () => {
     setEditMode(false)
     setDraftFolders(null)
@@ -233,6 +241,7 @@ export function LibraryPage() {
       }
       if (depth >= 2) return prev
       const sameParent = prev.filter((f) => f.parentId === parentId)
+      const maxOrder = sameParent.reduce((m, f) => Math.max(m, f.sortOrder), 0)
       const now = nowIso()
       return [
         ...prev,
@@ -240,7 +249,7 @@ export function LibraryPage() {
           id: createId(),
           parentId,
           name: name.trim() || '새 폴더',
-          sortOrder: Math.max(0, ...sameParent.map((f) => f.sortOrder)) + 1,
+          sortOrder: maxOrder + 1,
           createdAt: now,
           updatedAt: now,
         },
@@ -255,7 +264,7 @@ export function LibraryPage() {
     if (newParentId && !canNestUnder(id, newParentId, list)) return
     patchDraft((prev) => {
       const sameParent = prev.filter((f) => f.parentId === newParentId && f.id !== id)
-      const sortOrder = Math.max(0, ...sameParent.map((f) => f.sortOrder)) + 1
+      const sortOrder = sameParent.reduce((m, f) => Math.max(m, f.sortOrder), 0) + 1
       return prev.map((f) =>
         f.id === id ? { ...f, parentId: newParentId, sortOrder, updatedAt: nowIso() } : f,
       )
@@ -335,6 +344,7 @@ export function LibraryPage() {
       if (editMode) {
         patchDraft((prev) => {
           const sameParent = prev.filter((f) => f.parentId === null)
+          const maxOrder = sameParent.reduce((m, f) => Math.max(m, f.sortOrder), 0)
           const now = nowIso()
           return [
             ...prev,
@@ -342,7 +352,7 @@ export function LibraryPage() {
               id: createId(),
               parentId: null,
               name,
-              sortOrder: Math.max(0, ...sameParent.map((f) => f.sortOrder)) + 1,
+              sortOrder: maxOrder + 1,
               createdAt: now,
               updatedAt: now,
             },
@@ -353,6 +363,8 @@ export function LibraryPage() {
       }
       setNewFolderName('')
       setCreateOpen(false)
+    } catch {
+      // useFolders.error에 메시지 표시
     } finally {
       setBusy(false)
     }

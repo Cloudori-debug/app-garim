@@ -119,14 +119,14 @@ export function ReviewSessionPage() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-[var(--bg)]">
+    <div className="flex h-full flex-col bg-[var(--bg)] pt-[env(safe-area-inset-top)]">
       <header className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-3 py-2">
         <span className="text-sm font-semibold tabular-nums">
           복습 <span className="text-[var(--accent)]">{index + 1}</span>/{queue.length}
         </span>
         <button
           type="button"
-          className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--bg)]"
+          className="touch-target inline-flex items-center justify-center rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--bg)]"
           aria-label="닫기"
           onClick={() => navigate('/')}
         >
@@ -173,13 +173,13 @@ export function ReviewSessionPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 border-t-2 border-[var(--ink)] bg-[var(--surface)] p-3 pb-4">
+      <div className="grid grid-cols-2 gap-3 border-t-2 border-[var(--ink)] bg-[var(--surface)] p-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <button
           type="button"
           disabled={!revealed}
           onClick={() => void onGrade('again')}
           className={cn(
-            'rounded-xl border-2 border-[var(--ink)] py-3.5 text-sm font-bold',
+            'min-h-12 rounded-xl border-2 border-[var(--ink)] py-3.5 text-sm font-bold',
             revealed
               ? 'bg-[var(--surface)] text-[var(--ink)]'
               : 'cursor-not-allowed opacity-40',

@@ -11,6 +11,7 @@ export function useFolders() {
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
+      await folderRepo.ensureDefaultFolder()
       setFolders(await folderRepo.listFolders())
       setError(null)
     } catch (e) {
