@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Check,
+  ChevronRight,
   FilePlus2,
   FolderInput,
   FolderPlus,
@@ -522,7 +523,7 @@ export function LibraryPage() {
                   폴더
                 </p>
                 {roots.length === 0 && (
-                  <p className="px-2 py-4 text-center text-sm text-neutral-500">
+                  <p className="px-2 py-4 text-center text-sm text-[var(--muted)]">
                     새폴더로 폴더를 만드세요
                   </p>
                 )}
@@ -597,20 +598,20 @@ export function LibraryPage() {
                   size="sm"
                   variant="secondary"
                   disabled={!selectedFolderId || landscapeBusy}
-                  title="양면(가로) 스캔 PDF를 좌·우로 나눠 세로 페이지로 저장합니다"
+                  title="가로 양면 PDF를 좌·우로 나눠 세로 2페이지로 저장합니다"
                   onClick={() => landscapeFileRef.current?.click()}
                 >
                   <RectangleHorizontal className="h-4 w-4" />
-                  가로 PDF
+                  가로PDF (2분할) 추가
                 </Button>
               </div>
             </div>
             <ul className="min-h-0 flex-1 space-y-1 overflow-auto p-3">
               {!selectedFolderId && (
-                <li className="py-10 text-center text-sm text-neutral-500">왼쪽에서 폴더를 고르세요</li>
+                <li className="py-10 text-center text-sm text-[var(--muted)]">왼쪽에서 폴더를 고르세요</li>
               )}
               {selectedFolderId && documents.length === 0 && (
-                <li className="py-10 text-center text-sm text-neutral-500">PDF를 추가하세요</li>
+                <li className="py-10 text-center text-sm text-[var(--muted)]">PDF를 추가하세요</li>
               )}
               {documents.map((doc) => (
                 <DocumentRow
@@ -664,7 +665,7 @@ export function LibraryPage() {
 
       {landscapePreparing && (
         <BusyOverlay
-          title="가로 PDF 준비"
+          title="가로PDF (2분할) 준비"
           message="선택한 PDF를 읽는 중…"
           onCancel={cancelLandscapeJob}
         />
@@ -672,21 +673,49 @@ export function LibraryPage() {
 
       {landscapePreview && !landscapeProgress && (
         <Modal
-          title="가로 PDF 분할 확인"
+          title="가로PDF (2분할) 확인"
           onClose={cancelLandscapeJob}
           wide
         >
-          <p className="mb-3 text-sm text-[var(--muted)]">
-            양면(가로) 페이지를 <span className="text-[var(--ink)]">좌·우로 잘라</span> 세로
-            페이지로 저장합니다. 작업 중에는 다른 조작이 막힙니다.
-          </p>
-          <div className="mb-3 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50">
-            <img
-              src={landscapePreview.previewUrl}
-              alt="첫 페이지 미리보기"
-              className="mx-auto max-h-56 w-auto object-contain"
-            />
+          <div className="mb-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
+            <div className="min-w-0">
+              <p className="mb-1.5 text-center text-[11px] font-medium tracking-wide text-[var(--muted)]">
+                Before
+              </p>
+              <div className="overflow-hidden rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] p-1.5">
+                <img
+                  src={landscapePreview.previewUrl}
+                  alt="분할 전 가로 페이지"
+                  className="mx-auto max-h-36 w-full object-contain"
+                />
+              </div>
+              <p className="mt-1 text-center text-[10px] text-[var(--muted)]">양면 1장</p>
+            </div>
+
+            <div className="flex flex-col items-center justify-center pt-5 text-[var(--accent)]" aria-hidden>
+              <ChevronRight className="h-5 w-5" />
+            </div>
+
+            <div className="min-w-0">
+              <p className="mb-1.5 text-center text-[11px] font-medium tracking-wide text-[var(--muted)]">
+                After
+              </p>
+              <div className="flex flex-col gap-1 overflow-hidden rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] p-1.5">
+                <img
+                  src={landscapePreview.afterLeftUrl}
+                  alt="분할 후 왼쪽 페이지"
+                  className="mx-auto max-h-[4.5rem] w-auto object-contain"
+                />
+                <img
+                  src={landscapePreview.afterRightUrl}
+                  alt="분할 후 오른쪽 페이지"
+                  className="mx-auto max-h-[4.5rem] w-auto object-contain"
+                />
+              </div>
+              <p className="mt-1 text-center text-[10px] text-[var(--muted)]">세로 2장</p>
+            </div>
           </div>
+
           <dl className="mb-4 space-y-1.5 text-sm">
             <div className="flex justify-between gap-3">
               <dt className="text-[var(--muted)]">파일</dt>
@@ -695,26 +724,12 @@ export function LibraryPage() {
               </dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-[var(--muted)]">원본 페이지</dt>
+              <dt className="text-[var(--muted)]">원본</dt>
               <dd className="font-medium">{landscapePreview.pageCount}장</dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-[var(--muted)]">가로(양면) 예상</dt>
-              <dd className="font-medium">
-                약 {landscapePreview.landscapePages}장
-                <span className="ml-1 text-xs font-normal text-[var(--muted)]">
-                  (첫 페이지 기준)
-                </span>
-              </dd>
-            </div>
-            <div className="flex justify-between gap-3">
               <dt className="text-[var(--muted)]">예상 소요</dt>
-              <dd className="font-medium">
-                약 {formatEta(landscapePreview.estimatedSeconds)}
-                <span className="ml-1 text-xs font-normal text-[var(--muted)]">
-                  (기기·페이지 수에 따라 달라짐)
-                </span>
-              </dd>
+              <dd className="font-medium">약 {formatEta(landscapePreview.estimatedSeconds)}</dd>
             </div>
           </dl>
           <div className="flex justify-end gap-2">
@@ -730,7 +745,7 @@ export function LibraryPage() {
 
       {landscapeProgress && (
         <BusyOverlay
-          title="가로 PDF 분할 중"
+          title="가로PDF (2분할) 중"
           message={landscapeProgress.message}
           ratio={landscapeProgress.ratio}
           detail={
@@ -743,7 +758,7 @@ export function LibraryPage() {
       )}
 
       {landscapeError && !landscapePreparing && !landscapeProgress && !landscapePreview && (
-        <Modal title="가로 PDF 오류" onClose={() => setLandscapeError(null)}>
+        <Modal title="가로PDF (2분할) 오류" onClose={() => setLandscapeError(null)}>
           <p className="mb-4 text-sm text-red-700">{landscapeError}</p>
           <div className="flex justify-end">
             <Button size="sm" onClick={() => setLandscapeError(null)}>
@@ -919,7 +934,7 @@ function Modal({
         aria-label={title}
         className={cn(
           'w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-lg',
-          wide ? 'max-w-md' : 'max-w-sm',
+          wide ? 'max-w-lg' : 'max-w-sm',
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -973,11 +988,11 @@ function DocumentRow({
   }
 
   return (
-    <li className="rounded-lg px-2 py-2 hover:bg-neutral-50">
+    <li className="rounded-lg px-2 py-2 hover:bg-[var(--border)]/50">
       <div className="flex items-center gap-2">
         <Link
           to={`/read/${doc.id}`}
-          className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900 hover:underline"
+          className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--ink)] hover:underline"
         >
           {doc.fileName}
         </Link>
@@ -986,12 +1001,12 @@ function DocumentRow({
             가로
           </span>
         )}
-        <span className="text-xs text-neutral-500">{doc.pageCount}p</span>
+        <span className="text-xs text-[var(--muted)]">{doc.pageCount}p</span>
         <Button size="icon" variant="ghost" title="즐겨찾기" onClick={onToggleFavorite}>
           <Star
             className={cn(
               'h-4 w-4',
-              doc.isFavorite ? 'fill-amber-400 text-amber-500' : 'text-neutral-400',
+              doc.isFavorite ? 'fill-amber-400 text-amber-500' : 'text-[var(--muted)]',
             )}
           />
         </Button>
@@ -1005,10 +1020,10 @@ function DocumentRow({
             setTargetId(targets[0]?.id ?? '')
           }}
         >
-          <FolderInput className="h-4 w-4 text-neutral-500" />
+          <FolderInput className="h-4 w-4 text-[var(--muted)]" />
         </Button>
         <Button size="icon" variant="ghost" title="삭제" onClick={onDelete}>
-          <Trash2 className="h-4 w-4 text-neutral-500" />
+          <Trash2 className="h-4 w-4 text-[var(--muted)]" />
         </Button>
       </div>
 
@@ -1020,7 +1035,7 @@ function DocumentRow({
             <>
               <label className="text-xs font-medium text-[var(--muted)]">이동할 폴더</label>
               <select
-                className="h-8 min-w-40 flex-1 rounded-md border border-[var(--border-strong)] bg-white px-2 text-sm"
+                className="h-8 min-w-40 flex-1 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2 text-sm text-[var(--ink)]"
                 value={targetId}
                 onChange={(e) => setTargetId(e.target.value)}
               >
@@ -1342,16 +1357,16 @@ function SidebarFavorites({
         즐겨찾기 PDF
       </p>
       {loading ? (
-        <p className="px-2 py-2 text-xs text-neutral-500">불러오는 중…</p>
+        <p className="px-2 py-2 text-xs text-[var(--muted)]">불러오는 중…</p>
       ) : documents.length === 0 ? (
-        <p className="px-2 py-2 text-xs text-neutral-500">별(⭐)을 단 PDF가 여기 모입니다.</p>
+        <p className="px-2 py-2 text-xs text-[var(--muted)]">별(⭐)을 단 PDF가 여기 모입니다.</p>
       ) : (
         <ul className="space-y-0.5">
           {documents.map((doc) => (
             <li key={doc.id}>
               <Link
                 to={`/read/${doc.id}`}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-[var(--ink)] hover:bg-neutral-100"
+                className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-[var(--ink)] hover:bg-[var(--border)]/60"
                 title={doc.fileName}
               >
                 <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-500" />

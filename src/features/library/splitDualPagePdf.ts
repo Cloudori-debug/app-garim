@@ -16,8 +16,12 @@ export type SplitProgress = {
 export type SplitPreview = {
   file: File
   pageCount: number
-  /** 첫 페이지 미리보기 */
+  /** 분할 전(가로 양면) 미리보기 */
   previewUrl: string
+  /** 분할 후 왼쪽 페이지 */
+  afterLeftUrl: string
+  /** 분할 후 오른쪽 페이지 */
+  afterRightUrl: string
   /** 가로(양면)로 보이는 페이지 수 */
   landscapePages: number
   /** 대략 예상 초 (기기·해상도에 따라 달라짐) */
@@ -91,12 +95,19 @@ export async function prepareLandscapeSplitPreview(
   assertNotAborted(signal)
 
   const previewUrl = canvas.toDataURL('image/jpeg', 0.75)
+  const half = canvas.width / 2
+  const left = sliceCanvas(canvas, 0, 0, half, canvas.height)
+  const right = sliceCanvas(canvas, half, 0, canvas.width - half, canvas.height)
+  const afterLeftUrl = left.toDataURL('image/jpeg', 0.75)
+  const afterRightUrl = right.toDataURL('image/jpeg', 0.75)
   const estimatedSeconds = Math.max(3, Math.ceil(pageCount * SEC_PER_PAGE))
 
   return {
     file,
     pageCount,
     previewUrl,
+    afterLeftUrl,
+    afterRightUrl,
     landscapePages,
     estimatedSeconds,
   }

@@ -111,7 +111,7 @@ export function MarkBox({
           'absolute box-border border',
           studyMode
             ? mark.hiddenInStudy
-              ? 'border-2 border-neutral-800 bg-neutral-900/92'
+              ? 'border-2 border-neutral-950 bg-[#111111]'
               : VISIBLE_COLOR[mark.color]
             : EDIT_COLOR[mark.color],
           selected && editable && 'ring-2 ring-[var(--accent)] ring-offset-1',
@@ -119,7 +119,9 @@ export function MarkBox({
         style={
           editable
             ? { left: visualLeft, top: visualTop, width, height }
-            : { inset: 0 }
+            : mark.hiddenInStudy && studyMode
+              ? { inset: 0, backgroundColor: '#111111', opacity: 1 }
+              : { inset: 0 }
         }
       />
 

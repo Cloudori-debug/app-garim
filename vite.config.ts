@@ -12,8 +12,11 @@ export default defineConfig({
   },
   server: {
     host: true,
+    allowedHosts: true,
   },
   preview: {
     host: true,
+    // Cloudflare quick tunnel 등 외부 HTTPS 호스트 허용
+    allowedHosts: true,
   },
 })

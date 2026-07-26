@@ -1,57 +1,192 @@
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
 
-import { useReviewQueue } from '@/features/today/useReviewQueue'
-import { Button } from '@/shared/ui/button'
+import { useReviewQueue, type DocCount, type SubjectGroup } from '@/features/today/useReviewQueue'
+import { cn } from '@/shared/lib/cn'
+
+type Mode = 'subject' | null
 
 export function TodayPage() {
-  const { dueCount, byDoc, loading } = useReviewQueue()
+  const navigate = useNavigate()
+  const { dueCount, practiceCount, subjects, loading } = useReviewQueue()
+  const [mode, setMode] = useState<Mode>(null)
+  const [subjectId, setSubjectId] = useState<string | null>(null)
+
+  const subjectsRef = useRef<HTMLElement>(null)
+  const pdfsRef = useRef<HTMLElement>(null)
+
+  const selectedSubject = subjects.find((s) => s.folderId === subjectId) ?? null
+  const flatPdfs = subjects.length === 1 ? subjects[0]!.docs : null
+  const showSubjectStep = subjects.length > 1
+  const pdfList: DocCount[] = flatPdfs ?? selectedSubject?.docs ?? []
+
+  useEffect(() => {
+    if (mode !== 'subject') return
+    const t = window.setTimeout(() => {
+      subjectsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+    return () => window.clearTimeout(t)
+  }, [mode])
+
+  useEffect(() => {
+    if (!subjectId && !flatPdfs) return
+    if (mode !== 'subject') return
+    const t = window.setTimeout(() => {
+      pdfsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+    return () => window.clearTimeout(t)
+  }, [subjectId, flatPdfs, mode])
+
+  const openSubject = () => {
+    if (subjects.length === 0) return
+    setMode('subject')
+    setSubjectId(subjects.length === 1 ? subjects[0]!.folderId : null)
+  }
+
+  const pickSubject = (s: SubjectGroup) => {
+    setSubjectId(s.folderId)
+  }
+
+  const pickDoc = (d: DocCount) => {
+    if (d.practiceCount <= 0) return
+    navigate(`/review?mode=practice&doc=${encodeURIComponent(d.documentId)}`)
+  }
 
   return (
     <div className="flex h-full flex-col overflow-auto">
-      <header className="flex items-center justify-between px-5 pt-5 pb-2">
+      <header className="flex shrink-0 items-center justify-between px-5 pt-5 pb-2">
         <h1 className="text-base font-bold tracking-tight">암기노트</h1>
         <Link to="/more" className="text-xs text-[var(--muted)] underline-offset-2 hover:underline">
           더보기
         </Link>
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-center px-6 pb-10 text-center">
-        <p className="text-xs font-medium tracking-wide text-[var(--muted)]">오늘 복습</p>
-        <p className="mt-1 text-7xl font-bold tracking-tight tabular-nums text-[var(--ink)]">
-          {loading ? '—' : dueCount}
-        </p>
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-16 pt-8">
+        <div className="text-center">
+          <p className="text-xs tracking-wide text-[var(--muted)]">오늘</p>
+          <p className="mt-1 text-6xl font-bold tabular-nums tracking-tight text-[var(--ink)]">
+            {loading ? '—' : dueCount}
+          </p>
+        </div>
 
-        {dueCount > 0 ? (
-          <Button
-            asChild
-            className="mt-5 min-w-40 rounded-xl bg-[var(--accent)] px-8 py-3 text-base font-semibold text-white hover:bg-[var(--accent-hover)]"
-          >
-            <Link to="/review">복습 시작</Link>
-          </Button>
-        ) : (
-          <div className="mt-6 max-w-xs space-y-3">
-            <p className="text-sm text-[var(--muted)]">
-              서재에서 가림을 만들면 오늘 복습에 모여요.
-            </p>
-            <Button asChild variant="outline" className="rounded-xl border-[var(--ink)]">
-              <Link to="/library">서재로</Link>
-            </Button>
-          </div>
+        <div className="mt-8 grid gap-2">
+          <ModeButton
+            label="오늘 복습"
+            meta={dueCount > 0 ? `${dueCount}` : undefined}
+            disabled={dueCount <= 0}
+            onClick={() => navigate('/review')}
+          />
+          <ModeButton
+            label="랜덤 연습"
+            meta={practiceCount > 0 ? `${practiceCount}` : undefined}
+            disabled={practiceCount <= 0}
+            onClick={() => navigate('/review?mode=practice')}
+          />
+          <ModeButton
+            label="과목"
+            disabled={subjects.length === 0}
+            active={mode === 'subject'}
+            onClick={openSubject}
+          />
+        </div>
+
+        {mode === 'subject' && subjects.length > 0 && (
+          <>
+            {showSubjectStep && (
+              <section ref={subjectsRef} className="mt-10 scroll-mt-4">
+                <h2 className="mb-2 text-xs font-medium text-[var(--muted)]">과목</h2>
+                <ul className="divide-y divide-[var(--border)] rounded-xl border border-[var(--border-strong)] bg-[var(--surface)]">
+                  {subjects.map((s) => (
+                    <li key={s.folderId}>
+                      <button
+                        type="button"
+                        onClick={() => pickSubject(s)}
+                        className={cn(
+                          'flex w-full min-h-12 items-center justify-between gap-3 px-4 py-3 text-left text-sm transition-colors',
+                          subjectId === s.folderId
+                            ? 'bg-[var(--accent-soft)]/50 text-[var(--ink)]'
+                            : 'text-[var(--ink)] hover:bg-[var(--bg)]',
+                        )}
+                      >
+                        <span className="min-w-0 truncate font-medium">{s.name}</span>
+                        <span className="flex shrink-0 items-center gap-2 text-[var(--muted)]">
+                          <span className="tabular-nums">{s.practiceCount}</span>
+                          <ChevronRight className="h-4 w-4 opacity-50" />
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {pdfList.length > 0 && (flatPdfs || selectedSubject) && (
+              <section ref={pdfsRef} className="mt-8 scroll-mt-4">
+                <h2 className="mb-2 text-xs font-medium text-[var(--muted)]">
+                  {selectedSubject && showSubjectStep ? selectedSubject.name : 'PDF'}
+                </h2>
+                <ul className="divide-y divide-[var(--border)] rounded-xl border border-[var(--border-strong)] bg-[var(--surface)]">
+                  {pdfList.map((d) => (
+                    <li key={d.documentId}>
+                      <button
+                        type="button"
+                        onClick={() => pickDoc(d)}
+                        className="flex w-full min-h-12 items-center justify-between gap-3 px-4 py-3 text-left text-sm text-[var(--ink)] transition-colors hover:bg-[var(--bg)]"
+                      >
+                        <span className="min-w-0 truncate font-medium">
+                          {d.fileName.replace(/\.pdf$/i, '')}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-[var(--muted)]">
+                          {d.practiceCount}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </>
         )}
 
-        {byDoc.length > 0 && (
-          <div className="mt-10 flex flex-wrap justify-center gap-2">
-            {byDoc.slice(0, 6).map((d) => (
-              <span
-                key={d.documentId}
-                className="rounded-full border border-[var(--border-strong)] px-3 py-1 text-xs text-[var(--ink)]"
-              >
-                {d.fileName.replace(/\.pdf$/i, '')} {d.count}
-              </span>
-            ))}
-          </div>
+        {!loading && dueCount === 0 && practiceCount === 0 && (
+          <p className="mt-10 text-center text-sm text-[var(--muted)]">
+            서재에서 가림을 만들면 여기에 모여요.
+          </p>
         )}
       </main>
     </div>
+  )
+}
+
+function ModeButton({
+  label,
+  meta,
+  disabled,
+  active,
+  onClick,
+}: {
+  label: string
+  meta?: string
+  disabled?: boolean
+  active?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        'flex min-h-12 w-full items-center justify-between rounded-xl border px-4 text-sm font-semibold transition-colors',
+        disabled && 'cursor-not-allowed opacity-35',
+        active
+          ? 'border-[var(--accent)] bg-[var(--accent-soft)]/40 text-[var(--ink)]'
+          : 'border-[var(--border-strong)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--accent)]',
+      )}
+    >
+      <span>{label}</span>
+      {meta != null && <span className="tabular-nums font-medium text-[var(--muted)]">{meta}</span>}
+    </button>
   )
 }

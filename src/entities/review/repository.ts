@@ -37,9 +37,16 @@ export async function countDue(now = new Date()): Promise<number> {
   return all.filter((s) => isDue(s.dueAt, now)).length
 }
 
-export async function listDueQueue(now = new Date()): Promise<ReviewQueueItem[]> {
+export async function listDueQueue(
+  now = new Date(),
+  options: { documentId?: string; shuffle?: boolean } = {},
+): Promise<ReviewQueueItem[]> {
   const states = await db.reviewStates.toArray()
-  const due = states.filter((s) => isDue(s.dueAt, now)).sort((a, b) => a.dueAt.localeCompare(b.dueAt))
+  let due = states.filter((s) => isDue(s.dueAt, now))
+  if (options.documentId) {
+    due = due.filter((s) => s.documentId === options.documentId)
+  }
+  due.sort((a, b) => a.dueAt.localeCompare(b.dueAt))
 
   const items: ReviewQueueItem[] = []
   for (const s of due) {
@@ -55,6 +62,15 @@ export async function listDueQueue(now = new Date()): Promise<ReviewQueueItem[]>
       dueAt: s.dueAt,
     })
   }
+
+  if (options.shuffle) {
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      const tmp = items[i]!
+      items[i] = items[j]!
+      items[j] = tmp
+    }
+  }
   return items
 }
 
@@ -65,6 +81,43 @@ export async function countDueByDocument(now = new Date()): Promise<Record<strin
     map[item.documentId] = (map[item.documentId] ?? 0) + 1
   }
   return map
+}
+
+/** due와 무관하게 가림 전체(또는 문서별) — 연습용, 스케줄 미반영 */
+export async function listPracticeQueue(
+  options: { documentId?: string; shuffle?: boolean } = {},
+): Promise<ReviewQueueItem[]> {
+  const states = await db.reviewStates.toArray()
+  let pool = states
+  if (options.documentId) {
+    pool = pool.filter((s) => s.documentId === options.documentId)
+  }
+
+  const items: ReviewQueueItem[] = []
+  for (const s of pool) {
+    const mark = await db.marks.get(s.markId)
+    const doc = await db.documents.get(s.documentId)
+    if (!mark || !doc) continue
+    if ((doc.hiddenPages ?? []).includes(mark.page)) continue
+    items.push({
+      markId: mark.id,
+      documentId: doc.id,
+      fileName: doc.fileName,
+      page: mark.page,
+      dueAt: s.dueAt,
+    })
+  }
+
+  const shuffle = options.shuffle !== false
+  if (shuffle) {
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      const tmp = items[i]!
+      items[i] = items[j]!
+      items[j] = tmp
+    }
+  }
+  return items
 }
 
 export async function gradeMark(markId: string, grade: ReviewGrade): Promise<ReviewState | null> {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { X } from 'lucide-react'
 
 import * as documentRepo from '@/entities/document/repository'
@@ -13,6 +13,11 @@ import { cn } from '@/shared/lib/cn'
 
 export function ReviewSessionPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const documentId = searchParams.get('doc') || undefined
+  const isPractice = searchParams.get('mode') === 'practice'
+  const restartKey = searchParams.get('r') || ''
+
   const [queue, setQueue] = useState<ReviewQueueItem[]>([])
   const [index, setIndex] = useState(0)
   const [mark, setMark] = useState<Mark | null>(null)
@@ -21,13 +26,26 @@ export function ReviewSessionPage() {
   const [loading, setLoading] = useState(true)
   const [done, setDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [scopeLabel, setScopeLabel] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
+    setIndex(0)
+    setDone(false)
+    setQueue([])
     void (async () => {
       await reviewRepo.backfillMissingReviewStates()
-      const items = await reviewRepo.listDueQueue()
+      const items = isPractice
+        ? await reviewRepo.listPracticeQueue({ documentId, shuffle: true })
+        : await reviewRepo.listDueQueue(new Date(), { documentId, shuffle: true })
       if (cancelled) return
+      if (documentId) {
+        const doc = await documentRepo.getDocument(documentId)
+        setScopeLabel(doc?.fileName.replace(/\.pdf$/i, '') ?? null)
+      } else {
+        setScopeLabel(null)
+      }
       setQueue(items)
       setLoading(false)
       if (items.length === 0) setDone(true)
@@ -35,7 +53,7 @@ export function ReviewSessionPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [documentId, isPractice, restartKey])
 
   const current = queue[index] ?? null
 
@@ -96,11 +114,18 @@ export function ReviewSessionPage() {
 
   const onGrade = async (grade: 'again' | 'good') => {
     if (!current || !revealed) return
-    await reviewRepo.gradeMark(current.markId, grade)
-    // hide again for next time
+    if (!isPractice) {
+      await reviewRepo.gradeMark(current.markId, grade)
+    }
     if (mark && !mark.hiddenInStudy) await markRepo.toggleMarkHidden(mark.id)
     advance()
   }
+
+  const practiceHref = (() => {
+    const params = new URLSearchParams({ mode: 'practice', r: String(Date.now()) })
+    if (documentId) params.set('doc', documentId)
+    return `/review?${params.toString()}`
+  })()
 
   if (loading) {
     return <div className="flex h-full items-center justify-center text-sm text-[var(--muted)]">불러오는 중…</div>
@@ -109,11 +134,44 @@ export function ReviewSessionPage() {
   if (done || !current) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 bg-[var(--bg)] p-6 text-center">
-        <p className="text-lg font-bold text-[var(--ink)]">오늘 복습 완료</p>
-        <p className="text-sm text-[var(--muted)]">잘했어요. 내일 또 모여요.</p>
-        <Button asChild className="rounded-xl bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]">
-          <Link to="/">오늘로</Link>
-        </Button>
+        <p className="text-lg font-bold text-[var(--ink)]">
+          {queue.length === 0
+            ? isPractice
+              ? '연습할 항목 없음'
+              : '복습할 항목 없음'
+            : isPractice
+              ? '연습 완료'
+              : '오늘 복습 완료'}
+        </p>
+        <p className="text-sm text-[var(--muted)]">
+          {queue.length === 0
+            ? scopeLabel
+              ? `「${scopeLabel}」에 ${isPractice ? '가림이' : '오늘 due인 가림이'} 없어요.`
+              : isPractice
+                ? '연습할 가림이 없어요.'
+                : '오늘 due인 가림이 없어요.'
+            : isPractice
+              ? '일정에는 반영되지 않았어요.'
+              : '잘했어요. 내일 또 모여요.'}
+        </p>
+        <div className="flex flex-col items-center gap-2">
+          {queue.length > 0 && (
+            <Button asChild className="rounded-xl bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]">
+              <Link to={practiceHref}>다시 랜덤 연습</Link>
+            </Button>
+          )}
+          <Button
+            asChild
+            variant={queue.length > 0 ? 'outline' : 'default'}
+            className={
+              queue.length > 0
+                ? 'rounded-xl border-[var(--ink)]'
+                : 'rounded-xl bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]'
+            }
+          >
+            <Link to="/">오늘로</Link>
+          </Button>
+        </div>
       </div>
     )
   }
@@ -121,9 +179,18 @@ export function ReviewSessionPage() {
   return (
     <div className="flex h-full flex-col bg-[var(--bg)] pt-[env(safe-area-inset-top)]">
       <header className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-3 py-2">
-        <span className="text-sm font-semibold tabular-nums">
-          복습 <span className="text-[var(--accent)]">{index + 1}</span>/{queue.length}
-        </span>
+        <div className="min-w-0">
+          <span className="text-sm font-semibold tabular-nums">
+            {isPractice ? '연습' : '복습'}{' '}
+            <span className="text-[var(--accent)]">{index + 1}</span>/{queue.length}
+          </span>
+          {scopeLabel && (
+            <p className="truncate text-xs text-[var(--muted)]">{scopeLabel}</p>
+          )}
+          {isPractice && !scopeLabel && (
+            <p className="text-xs text-[var(--muted)]">일정 미반영</p>
+          )}
+        </div>
         <button
           type="button"
           className="touch-target inline-flex items-center justify-center rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--bg)]"
@@ -135,7 +202,7 @@ export function ReviewSessionPage() {
       </header>
 
       <p className="truncate border-b border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--muted)]">
-        {current.fileName} · p.{current.page}
+        {current.fileName.replace(/\.pdf$/i, '')} · p.{current.page}
       </p>
 
       {error && (
