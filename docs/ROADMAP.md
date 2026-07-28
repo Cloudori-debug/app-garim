@@ -19,7 +19,7 @@
 4. **의견 수집** — 더보기 → 의견 보내기
 5. 스토어 반응을 본 뒤 **유료** vs **무료 확장** 결정 (결제 구현은 그전까지 보류)
 
-자세한 절차: `docs/STORE_RELEASE.md`
+자세한 절차: `docs/STORE_RELEASE.md` · 계정 연결: `docs/STORE_ACCOUNTS.md`
 
 ### 무료 → 유료 (가설, 확정 전)
 

@@ -1,27 +1,32 @@
-# Codemagic — 암기노트 iOS
+# Codemagic — 암기노트 (Capacitor 8 · SPM)
 
-# 사전 준비 (Codemagic UI)
-# 1) GitHub 저장소 연결
-# 2) Apple Developer / App Store Connect API 키 등록
-# 3) 아래 환경 변수·코드서명 그룹을 Codemagic에 맞게 연결
+# 사전 준비 (Codemagic UI에서 1회)
+# 1) https://codemagic.io → GitHub 저장소 Cloudori-debug/app-garim 연결
+# 2) Teams → Integrations → App Store Connect API 키 등록, 이름을 amginote 로 저장
+# 3) App Store Connect에서 앱 "암기노트" (Bundle ID com.clowood.amginote) 생성 후
+#    General → App Information 의 Apple ID 숫자를 APP_STORE_APPLE_ID 에 넣기
+# 4) Code signing: Automatic / App Store distribution · bundle id 일치 확인
 #
-# 참고: https://docs.codemagic.io/yaml-quick-start/building-a-capacitor-project/
+# 문서: docs/STORE_ACCOUNTS.md
 
 workflows:
   ios-testflight:
     name: iOS TestFlight
     instance_type: mac_mini_m2
-    max_build_duration: 60
+    max_build_duration: 90
     integrations:
       app_store_connect: amginote
     environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.clowood.amginote
       vars:
-        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
-        APP_STORE_APPLE_ID: 0000000000 # App Store Connect 앱 Apple ID로 교체
+        # App Store Connect → 앱 → App Information → Apple ID (숫자)
+        APP_STORE_APPLE_ID: REPLACE_WITH_ASC_APPLE_ID
       node: 22
       xcode: latest
-      cocoapods: default
     scripts:
       - name: Install npm dependencies
         script: |
@@ -33,10 +38,15 @@ workflows:
       - name: Set up code signing
         script: |
           xcode-project use-profiles
+      - name: Increment build number
+        script: |
+          cd ios/App
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          agvtool new-version -all $((LATEST + 1))
       - name: Build ipa
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$CM_BUILD_DIR/$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
@@ -51,4 +61,37 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
-        # submit_to_app_store: false
+
+  android-play-internal:
+    name: Android Play Internal
+    instance_type: linux_x2
+    max_build_duration: 60
+    # Play Console 서비스 계정 JSON을 Codemagic에 올린 뒤 아래 주석을 해제하세요.
+    # integrations:
+    #   google_play: amginote-play
+    environment:
+      android_signing:
+        - amginote
+      vars:
+        PACKAGE_NAME: com.clowood.amginote
+      node: 22
+      java: 17
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm ci
+      - name: Build web and sync Capacitor Android
+        script: |
+          npm run build
+          npx cap sync android
+      - name: Build release bundle
+        script: |
+          cd android
+          ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab
+    # publishing:
+    #   google_play:
+    #     credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+    #     track: internal
+    #     submit_as_draft: true

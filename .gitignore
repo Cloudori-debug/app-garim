@@ -21,10 +21,15 @@ android/.gradle/
 android/app/build/
 android/build/
 android/local.properties
+android/keystore.properties
+android/app/*.keystore
+android/app/*.jks
 android/captures/
 android/.idea/
 *.apk
 *.aab
+*.keystore
+*.jks
 
 # Capacitor / iOS local (Mac·CI에서 생성)
 ios/App/Pods/
