@@ -41,6 +41,10 @@ app → features → entities → shared
 | PDF | react-pdf (`renderTextLayer=false`) |
 | DB | Dexie `AmgiNote` **version 2** |
 | 라우팅 | React Router |
+| 네이티브 | Capacitor 8 (`android/` · `ios/`) · App ID `com.clowood.amginote` |
+
+웹 자산은 `npm run build` → `npx cap sync`로 네이티브 프로젝트에 복사한다.  
+스토어 절차는 `docs/STORE_RELEASE.md`.
 
 ## 데이터 모델 (v1.1)
 

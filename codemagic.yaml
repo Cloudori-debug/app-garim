@@ -1,0 +1,54 @@
+# Codemagic — 암기노트 iOS
+
+# 사전 준비 (Codemagic UI)
+# 1) GitHub 저장소 연결
+# 2) Apple Developer / App Store Connect API 키 등록
+# 3) 아래 환경 변수·코드서명 그룹을 Codemagic에 맞게 연결
+#
+# 참고: https://docs.codemagic.io/yaml-quick-start/building-a-capacitor-project/
+
+workflows:
+  ios-testflight:
+    name: iOS TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: amginote
+    environment:
+      vars:
+        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        XCODE_SCHEME: App
+        APP_STORE_APPLE_ID: 0000000000 # App Store Connect 앱 Apple ID로 교체
+      node: 22
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm ci
+      - name: Build web and sync Capacitor iOS
+        script: |
+          npm run build
+          npx cap sync ios
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
+      - name: Build ipa
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients:
+          - clowood.cy@gmail.com
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # submit_to_app_store: false

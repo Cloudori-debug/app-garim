@@ -1,7 +1,7 @@
 # 아이패드 우선 배포 (고정 HTTPS)
 
-암기노트는 **웹·PWA**입니다. App Store 없이 Safari / 홈 화면 아이콘으로 씁니다.  
-**항상 같은 `https://…` 주소**가 필요합니다.
+암기노트 **웹·PWA** 배포 안내입니다. (스토어 네이티브는 `docs/STORE_RELEASE.md`)  
+웹으로 아이패드에서 쓰려면 **항상 같은 `https://…` 주소**가 필요합니다.
 
 ## 가장 쉬운 방법: Cloudflare Pages
 
@@ -77,7 +77,7 @@ npm run preview -- --host
 | 데이터 | PDF·가림은 **그 아이패드 브라우저**에만 저장 |
 | 백업 | 더보기 → 내보내기 / 가져오기 |
 | 한글 PDF | cMap 포함 — 일부 한글 교재 글자 깨짐 완화 |
-| 앱스토어 | 이번 단계 범위 밖 |
+| 앱스토어 | Capacitor 경로 — `docs/STORE_RELEASE.md` |
 
 ## 성공 확인
 
