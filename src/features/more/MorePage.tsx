@@ -6,6 +6,9 @@ import * as backupRepo from '@/entities/backup/repository'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/lib/cn'
 
+/** 의견·문의 수신 메일 (출시용) */
+const FEEDBACK_EMAIL = 'clowood.cy@gmail.com'
+
 const ACCENT_DOT: Record<string, string> = {
   default: '#0F766E',
   dark: '#2DD4BF',
@@ -20,6 +23,8 @@ export function MorePage() {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState('')
+  const [feedbackHint, setFeedbackHint] = useState<string | null>(null)
 
   const exportBackup = async () => {
     setBusy(true)
@@ -57,6 +62,18 @@ export function MorePage() {
       setError(e instanceof Error ? e.message : '가져오기에 실패했습니다.')
       setBusy(false)
     }
+  }
+
+  const sendFeedback = () => {
+    const text = feedback.trim()
+    if (!text) {
+      setFeedbackHint('내용을 입력해 주세요.')
+      return
+    }
+    setFeedbackHint(null)
+    const subject = encodeURIComponent('암기노트 의견')
+    const body = encodeURIComponent(text)
+    window.location.href = `mailto:${FEEDBACK_EMAIL}?subject=${subject}&body=${body}`
   }
 
   return (
@@ -124,6 +141,24 @@ export function MorePage() {
         </div>
         {message && <p className="mt-3 text-sm text-[var(--ink)]">{message}</p>}
         {error && <p className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-xs font-medium text-[var(--muted)]">의견 보내기</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          불편한 점이나 필요한 기능을 알려 주세요.
+        </p>
+        <textarea
+          value={feedback}
+          onChange={(e) => setFeedback(e.target.value)}
+          rows={4}
+          placeholder="예: 복습할 때 … 가 불편해요"
+          className="mt-3 w-full resize-y rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--ink)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--accent)]"
+        />
+        {feedbackHint && <p className="mt-2 text-sm text-[var(--danger)]">{feedbackHint}</p>}
+        <Button size="sm" className="mt-3" onClick={sendFeedback}>
+          메일로 보내기
+        </Button>
       </section>
 
       <section className="mt-8">
