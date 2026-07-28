@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { useTheme } from '@/app/ThemeProvider'
 import * as backupRepo from '@/entities/backup/repository'
@@ -69,7 +70,18 @@ export function MorePage() {
   return (
     <div className="h-full overflow-auto px-5 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <h1 className="text-lg font-bold">더보기</h1>
-      <p className="mt-1 text-sm text-[var(--muted)]">테마 · 백업 · 설치</p>
+      <p className="mt-1 text-sm text-[var(--muted)]">테마 · 통계 · 백업 · 설치</p>
+
+      <section className="mt-8">
+        <h2 className="text-xs font-semibold tracking-wide text-[var(--muted)] uppercase">통계</h2>
+        <Link
+          to="/stats"
+          className="mt-3 flex min-h-12 items-center justify-between rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--ink)]"
+        >
+          복습·오답 현황
+          <span className="text-xs font-normal text-[var(--muted)]">보기</span>
+        </Link>
+      </section>
 
       <section className="mt-8">
         <h2 className="text-xs font-semibold tracking-wide text-[var(--muted)] uppercase">색 테마</h2>

@@ -6,6 +6,7 @@ import { MarksHubPage } from '@/features/marks/MarksHubPage'
 import { MorePage } from '@/features/more/MorePage'
 import { ReaderPage } from '@/features/reader/ReaderPage'
 import { ReviewSessionPage } from '@/features/review/ReviewSessionPage'
+import { StatsPage } from '@/features/stats/StatsPage'
 import { TodayPage } from '@/features/today/TodayPage'
 
 export function AppRouter() {
@@ -16,6 +17,7 @@ export function AppRouter() {
           <Route index element={<TodayPage />} />
           <Route path="library" element={<LibraryPage />} />
           <Route path="marks" element={<MarksHubPage />} />
+          <Route path="stats" element={<StatsPage />} />
           <Route path="more" element={<MorePage />} />
           <Route path="read/:documentId" element={<ReaderPage />} />
         </Route>

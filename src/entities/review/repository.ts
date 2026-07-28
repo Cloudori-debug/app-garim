@@ -1,6 +1,12 @@
 import { db } from '@/entities/db'
-import type { ReviewGrade, ReviewQueueItem, ReviewState } from '@/entities/review/types'
-import { isDue, scheduleAfterGrade } from '@/shared/lib/reviewSchedule'
+import type {
+  ReviewGrade,
+  ReviewQueueItem,
+  ReviewState,
+  ReviewStatsSummary,
+  SubjectReviewStat,
+} from '@/entities/review/types'
+import { isDue, scheduleAfterGrade, startOfLocalDay } from '@/shared/lib/reviewSchedule'
 import { nowIso } from '@/shared/lib/id'
 
 export async function ensureReviewState(markId: string, documentId: string): Promise<ReviewState> {
@@ -146,4 +152,68 @@ export async function backfillMissingReviewStates(): Promise<number> {
     }
   }
   return n
+}
+
+/** 오늘·과목별 복습 통계 (오답=lapses>0) */
+export async function getReviewStats(now = new Date()): Promise<ReviewStatsSummary> {
+  await backfillMissingReviewStates()
+  const [states, documents, folders, marks] = await Promise.all([
+    db.reviewStates.toArray(),
+    db.documents.toArray(),
+    db.folders.toArray(),
+    db.marks.toArray(),
+  ])
+  const docById = new Map(documents.map((d) => [d.id, d]))
+  const markById = new Map(marks.map((m) => [m.id, m]))
+  const folderName = new Map(folders.map((f) => [f.id, f.name]))
+  const dayStart = startOfLocalDay(now).getTime()
+
+  let due = 0
+  let reviewedToday = 0
+  let weak = 0
+  const byFolder = new Map<string, SubjectReviewStat>()
+
+  for (const s of states) {
+    const doc = docById.get(s.documentId)
+    const mark = markById.get(s.markId)
+    if (!doc || !mark) continue
+    if ((doc.hiddenPages ?? []).includes(mark.page)) continue
+
+    const folderId = doc.folderId
+    let row = byFolder.get(folderId)
+    if (!row) {
+      row = {
+        folderId,
+        name: folderName.get(folderId) ?? '서재',
+        total: 0,
+        due: 0,
+        weak: 0,
+      }
+      byFolder.set(folderId, row)
+    }
+    row.total += 1
+
+    if (isDue(s.dueAt, now)) {
+      due += 1
+      row.due += 1
+    }
+    if (s.lapses > 0) {
+      weak += 1
+      row.weak += 1
+    }
+    if (s.lastReviewedAt) {
+      const t = new Date(s.lastReviewedAt).getTime()
+      if (t >= dayStart) reviewedToday += 1
+    }
+  }
+
+  const bySubject = [...byFolder.values()].sort((a, b) => b.due - a.due || b.weak - a.weak)
+
+  return {
+    total: bySubject.reduce((n, s) => n + s.total, 0),
+    due,
+    reviewedToday,
+    weak,
+    bySubject,
+  }
 }

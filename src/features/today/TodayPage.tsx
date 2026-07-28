@@ -57,9 +57,14 @@ export function TodayPage() {
     <div className="flex h-full flex-col overflow-auto">
       <header className="flex shrink-0 items-center justify-between px-5 pt-5 pb-2">
         <h1 className="text-base font-bold tracking-tight">암기노트</h1>
-        <Link to="/more" className="text-xs text-[var(--muted)] underline-offset-2 hover:underline">
-          더보기
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/stats" className="text-xs text-[var(--muted)] underline-offset-2 hover:underline">
+            통계
+          </Link>
+          <Link to="/more" className="text-xs text-[var(--muted)] underline-offset-2 hover:underline">
+            더보기
+          </Link>
+        </div>
       </header>
 
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-16 pt-8">

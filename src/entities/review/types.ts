@@ -24,3 +24,20 @@ export interface ReviewQueueItem {
   page: number
   dueAt: string
 }
+
+export type SubjectReviewStat = {
+  folderId: string
+  name: string
+  total: number
+  due: number
+  /** 한 번이라도 틀림(lapses>0) */
+  weak: number
+}
+
+export type ReviewStatsSummary = {
+  total: number
+  due: number
+  reviewedToday: number
+  weak: number
+  bySubject: SubjectReviewStat[]
+}
