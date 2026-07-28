@@ -71,6 +71,25 @@ export async function toggleMarkHidden(id: string): Promise<void> {
   await db.marks.update(id, { hiddenInStudy: !mark.hiddenInStudy, updatedAt: nowIso() })
 }
 
+/** 문서(또는 특정 페이지) 가림을 일괄 열기/가리기. 변경된 개수 반환 */
+export async function setMarksHiddenInStudy(
+  documentId: string,
+  hiddenInStudy: boolean,
+  page?: number,
+): Promise<number> {
+  let marks = await listMarksByDocument(documentId)
+  if (page != null) marks = marks.filter((m) => m.page === page)
+  const targets = marks.filter((m) => m.hiddenInStudy !== hiddenInStudy)
+  if (targets.length === 0) return 0
+  const now = nowIso()
+  await db.transaction('rw', db.marks, async () => {
+    await Promise.all(
+      targets.map((m) => db.marks.update(m.id, { hiddenInStudy, updatedAt: now })),
+    )
+  })
+  return targets.length
+}
+
 export async function setMarkFavorite(id: string, isFavorite: boolean): Promise<void> {
   await db.marks.update(id, { isFavorite, updatedAt: nowIso() })
 }

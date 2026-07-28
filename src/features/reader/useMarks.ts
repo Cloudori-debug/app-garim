@@ -66,6 +66,16 @@ export function useMarks(documentId: string | undefined) {
     [refresh],
   )
 
+  const setHiddenBulk = useCallback(
+    async (hiddenInStudy: boolean, page?: number) => {
+      if (!documentId) return 0
+      const n = await markRepo.setMarksHiddenInStudy(documentId, hiddenInStudy, page)
+      await refresh()
+      return n
+    },
+    [documentId, refresh],
+  )
+
   const toggleFavorite = useCallback(
     async (id: string, isFavorite: boolean) => {
       await markRepo.setMarkFavorite(id, isFavorite)
@@ -90,6 +100,7 @@ export function useMarks(documentId: string | undefined) {
     updateGeometry,
     remove,
     toggleHidden,
+    setHiddenBulk,
     toggleFavorite,
     setColor,
   }

@@ -432,6 +432,29 @@ export function ReaderPage() {
           </Button>
         )}
 
+        {(mode === 'study' || mode === 'wordCover') && pageMarks.length > 0 && (
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              title="이 페이지 가림 전부 열기"
+              onClick={() => void marksApi.setHiddenBulk(false, page)}
+            >
+              <Eye className="h-4 w-4" />
+              <span className="hidden sm:inline">전부 열기</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              title="이 페이지 가림 전부 가리기"
+              onClick={() => void marksApi.setHiddenBulk(true, page)}
+            >
+              <EyeOff className="h-4 w-4" />
+              <span className="hidden sm:inline">전부 가리기</span>
+            </Button>
+          </div>
+        )}
+
         <div className="ml-auto flex items-center gap-1">
           <Button size="icon" variant="ghost" disabled={!canPrev} onClick={() => goAdjacent(-1)}>
             <ChevronLeft className="h-4 w-4" />
