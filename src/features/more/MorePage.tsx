@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
 
 import { useTheme } from '@/app/ThemeProvider'
 import * as backupRepo from '@/entities/backup/repository'
@@ -77,59 +78,66 @@ export function MorePage() {
   }
 
   return (
-    <div className="h-full overflow-auto px-5 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+    <div className="mx-auto h-full max-w-md overflow-auto px-5 py-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <h1 className="text-lg font-bold">더보기</h1>
 
-      <section className="mt-8">
-        <h2 className="text-xs font-medium text-[var(--muted)]">통계</h2>
+      <div className="mt-5 overflow-hidden rounded-xl border border-[var(--border-strong)] bg-[var(--surface)]">
         <Link
           to="/stats"
-          className="mt-2 flex min-h-12 items-center rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--ink)]"
+          className="flex min-h-12 items-center justify-between gap-3 px-4 text-sm font-semibold text-[var(--ink)]"
         >
-          복습·오답 현황
+          통계
+          <span className="flex items-center gap-1 text-xs font-normal text-[var(--muted)]">
+            복습·오답
+            <ChevronRight className="h-4 w-4 opacity-50" />
+          </span>
         </Link>
-      </section>
 
-      <section className="mt-8">
-        <h2 className="text-xs font-medium text-[var(--muted)]">테마</h2>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {ids.map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTheme(id)}
-              className={cn(
-                'inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors',
-                theme === id
-                  ? 'border-transparent bg-[var(--accent)] text-white'
-                  : 'border-[var(--border-strong)] bg-[var(--surface)] text-[var(--ink)]',
-              )}
-            >
-              <span
-                className="h-2.5 w-2.5 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]"
-                style={{ background: ACCENT_DOT[id] }}
-              />
-              {labels[id]}
-            </button>
-          ))}
+        <div className="border-t border-[var(--border)] px-4 py-3">
+          <p className="text-xs font-medium text-[var(--muted)]">테마</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {ids.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTheme(id)}
+                className={cn(
+                  'inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors',
+                  theme === id
+                    ? 'border-transparent bg-[var(--accent)] text-white'
+                    : 'border-[var(--border-strong)] bg-[var(--bg)] text-[var(--ink)]',
+                )}
+              >
+                <span
+                  className="h-2 w-2 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]"
+                  style={{ background: ACCENT_DOT[id] }}
+                />
+                {labels[id]}
+              </button>
+            ))}
+          </div>
         </div>
-      </section>
 
-      <section className="mt-8">
-        <h2 className="text-xs font-medium text-[var(--muted)]">백업</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">PDF·가림·복습을 파일로 보관합니다.</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button size="sm" disabled={busy} onClick={() => void exportBackup()}>
-            내보내기
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => importRef.current?.click()}
-          >
-            가져오기
-          </Button>
+        <div className="border-t border-[var(--border)] px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-[var(--ink)]">백업</p>
+              <p className="text-xs text-[var(--muted)]">PDF·가림·복습 보관</p>
+            </div>
+            <div className="flex shrink-0 gap-1.5">
+              <Button size="sm" disabled={busy} onClick={() => void exportBackup()}>
+                내보내기
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => importRef.current?.click()}
+              >
+                가져오기
+              </Button>
+            </div>
+          </div>
           <input
             ref={importRef}
             type="file"
@@ -137,42 +145,34 @@ export function MorePage() {
             className="hidden"
             onChange={(e) => void importBackup(e.target.files)}
           />
+          {message && <p className="mt-2 text-xs text-[var(--ink)]">{message}</p>}
+          {error && <p className="mt-2 text-xs text-[var(--danger)]">{error}</p>}
         </div>
-        {message && <p className="mt-3 text-sm text-[var(--ink)]">{message}</p>}
-        {error && <p className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
-      </section>
 
-      <section className="mt-8">
-        <h2 className="text-xs font-medium text-[var(--muted)]">의견 보내기</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          불편한 점이나 필요한 기능을 알려 주세요.
-        </p>
-        <textarea
-          value={feedback}
-          onChange={(e) => setFeedback(e.target.value)}
-          rows={4}
-          placeholder="예: 복습할 때 … 가 불편해요"
-          className="mt-3 w-full resize-y rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--ink)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--accent)]"
-        />
-        {feedbackHint && <p className="mt-2 text-sm text-[var(--danger)]">{feedbackHint}</p>}
-        <Button size="sm" className="mt-3" onClick={sendFeedback}>
-          메일로 보내기
-        </Button>
-      </section>
+        <div className="border-t border-[var(--border)] px-4 py-3">
+          <p className="text-sm font-semibold text-[var(--ink)]">의견 보내기</p>
+          <textarea
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            rows={3}
+            placeholder="불편한 점이나 필요한 기능"
+            className="mt-2 w-full resize-y rounded-lg border border-[var(--border-strong)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--ink)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--accent)]"
+          />
+          {feedbackHint && <p className="mt-1.5 text-xs text-[var(--danger)]">{feedbackHint}</p>}
+          <Button size="sm" className="mt-2" onClick={sendFeedback}>
+            메일로 보내기
+          </Button>
+        </div>
 
-      <section className="mt-8">
-        <h2 className="text-xs font-medium text-[var(--muted)]">홈 화면에 추가</h2>
-        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[var(--muted)]">
-          <li>
-            <span className="text-[var(--ink)]">Safari</span>에서 공유 버튼
-          </li>
-          <li>
-            <span className="text-[var(--ink)]">홈 화면에 추가</span>
-          </li>
-        </ol>
-      </section>
+        <div className="border-t border-[var(--border)] px-4 py-3">
+          <p className="text-sm font-semibold text-[var(--ink)]">홈 화면에 추가</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Safari 공유 → 홈 화면에 추가
+          </p>
+        </div>
+      </div>
 
-      <p className="mt-10 text-center text-xs text-[var(--muted)]">
+      <p className="mt-5 text-center text-xs text-[var(--muted)]">
         암기노트 · 데이터는 이 기기에만 저장됩니다
       </p>
     </div>
