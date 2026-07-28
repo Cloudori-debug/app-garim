@@ -263,7 +263,7 @@ export function ReaderPage() {
   if (error) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6">
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-[var(--danger)]">{error}</p>
         <Button asChild variant="secondary">
           <Link to="/library">서재로</Link>
         </Button>
@@ -272,7 +272,7 @@ export function ReaderPage() {
   }
 
   if (!doc || !fileUrl || !documentId) {
-    return <div className="p-8 text-sm text-neutral-500">불러오는 중…</div>
+    return <div className="p-8 text-sm text-[var(--muted)]">불러오는 중…</div>
   }
 
   return (
@@ -323,7 +323,7 @@ export function ReaderPage() {
             <Star
               className={cn(
                 'h-4 w-4',
-                doc.isFavorite ? 'fill-amber-400 text-amber-500' : 'text-neutral-400',
+                doc.isFavorite ? 'fill-[var(--accent)] text-[var(--accent)]' : 'text-[var(--muted)]',
               )}
             />
           </button>
@@ -340,8 +340,8 @@ export function ReaderPage() {
             )}
             title={
               pageLayout === 'landscape'
-                ? '가로 PDF (화면 맞춤 확대) · 탭하면 세로로'
-                : '세로 PDF · 탭하면 가로 스캔용으로'
+                ? '가로 맞춤 (넓은 스캔용)'
+                : '세로 맞춤'
             }
             onClick={() => {
               const next = pageLayout === 'landscape' ? 'portrait' : 'landscape'
@@ -460,7 +460,7 @@ export function ReaderPage() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
 
-          <div className="flex items-center gap-1 text-xs text-neutral-600">
+          <div className="flex items-center gap-1 text-xs text-[var(--muted)]">
             <Button
               size="icon"
               variant="ghost"
@@ -499,7 +499,7 @@ export function ReaderPage() {
                 }
               }}
             />
-            <span className="text-neutral-400">/</span>
+            <span className="text-[var(--muted)]">/</span>
             <span className="min-w-6 tabular-nums">{pageCount}</span>
             {hiddenPages.length > 0 && (
               <span className="ml-1 text-[10px] text-[var(--muted)]">
@@ -630,20 +630,13 @@ export function ReaderPage() {
 
       {mode === 'wordCover' && !selectedMark && pageMarks.length === 0 && (
         <p className="border-t border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--muted)]">
-          드래그로 단어(상자) 가림을 만드세요. 선택 후 상단에서 삭제할 수 있습니다.
+          드래그해서 가림을 만드세요.
         </p>
       )}
 
       {mode === 'pageCover' && (
         <p className="border-t border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--muted)]">
-          숨긴 페이지는 학습·단어 가림에서 보이지 않습니다. PDF 파일은 그대로 두고, 책장에서
-          숨기기/보이기를 바꿀 수 있습니다.
-        </p>
-      )}
-
-      {mode === 'study' && (
-        <p className="border-t border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--muted)]">
-          숨긴 페이지는 건너뜁니다. 단어 가림은 탭으로 열고 닫습니다.
+          숨긴 페이지는 학습·단어 가림에서 보이지 않습니다.
         </p>
       )}
     </div>

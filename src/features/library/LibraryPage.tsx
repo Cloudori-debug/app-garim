@@ -469,12 +469,11 @@ export function LibraryPage() {
   return (
     <div className="mx-auto flex h-full max-w-6xl flex-col gap-4 overflow-auto p-4 md:p-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">서재</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">과목 폴더에 PDF를 넣고 가림을 만드세요.</p>
+        <h1 className="text-lg font-bold tracking-tight">서재</h1>
       </header>
 
       {error && (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-xl border border-[var(--danger)]/30 bg-[var(--danger)]/10 px-3 py-2 text-sm text-[var(--danger)]">
           {error}
         </p>
       )}
@@ -519,7 +518,7 @@ export function LibraryPage() {
               />
 
               <div>
-                <p className="mb-1.5 px-1 text-[11px] font-semibold tracking-wide text-[var(--muted)] uppercase">
+                <p className="mb-1.5 px-1 text-[11px] font-medium text-[var(--muted)]">
                   폴더
                 </p>
                 {roots.length === 0 && (
@@ -602,13 +601,13 @@ export function LibraryPage() {
                   onClick={() => landscapeFileRef.current?.click()}
                 >
                   <RectangleHorizontal className="h-4 w-4" />
-                  가로PDF (2분할) 추가
+                  2분할
                 </Button>
               </div>
             </div>
             <ul className="min-h-0 flex-1 space-y-1 overflow-auto p-3">
               {!selectedFolderId && (
-                <li className="py-10 text-center text-sm text-[var(--muted)]">왼쪽에서 폴더를 고르세요</li>
+                <li className="py-10 text-center text-sm text-[var(--muted)]">폴더를 선택하세요</li>
               )}
               {selectedFolderId && documents.length === 0 && (
                 <li className="py-10 text-center text-sm text-[var(--muted)]">PDF를 추가하세요</li>
@@ -759,7 +758,7 @@ export function LibraryPage() {
 
       {landscapeError && !landscapePreparing && !landscapeProgress && !landscapePreview && (
         <Modal title="가로PDF (2분할) 오류" onClose={() => setLandscapeError(null)}>
-          <p className="mb-4 text-sm text-red-700">{landscapeError}</p>
+          <p className="mb-4 text-sm text-[var(--danger)]">{landscapeError}</p>
           <div className="flex justify-end">
             <Button size="sm" onClick={() => setLandscapeError(null)}>
               확인
@@ -1162,7 +1161,7 @@ function FolderItem({
           'rounded-lg px-1.5 py-1.5 text-sm transition-shadow',
           rowMode === 'idle' &&
             !isDropHover &&
-            (selected ? 'bg-[var(--accent)] text-white' : 'hover:bg-neutral-100'),
+            (selected ? 'bg-[var(--accent)] text-white' : 'hover:bg-[var(--bg)]'),
           rowMode !== 'idle' && 'bg-[var(--accent-soft)]',
           isDropHover &&
             'bg-[var(--accent-soft)] text-[var(--ink)] ring-2 ring-[var(--accent)] ring-offset-1',

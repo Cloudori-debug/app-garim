@@ -84,10 +84,9 @@ export function MorePage() {
         <h2 className="text-xs font-medium text-[var(--muted)]">통계</h2>
         <Link
           to="/stats"
-          className="mt-2 flex min-h-12 items-center justify-between rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--ink)]"
+          className="mt-2 flex min-h-12 items-center rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--ink)]"
         >
           복습·오답 현황
-          <span className="text-xs font-normal text-[var(--muted)]">보기</span>
         </Link>
       </section>
 

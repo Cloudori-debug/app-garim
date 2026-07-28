@@ -146,10 +146,10 @@ export function ReviewSessionPage() {
         <p className="text-sm text-[var(--muted)]">
           {queue.length === 0
             ? scopeLabel
-              ? `「${scopeLabel}」에 ${isPractice ? '가림이' : '오늘 due인 가림이'} 없어요.`
+              ? `「${scopeLabel}」에 ${isPractice ? '가림이' : '오늘 할 가림이'} 없어요.`
               : isPractice
                 ? '연습할 가림이 없어요.'
-                : '오늘 due인 가림이 없어요.'
+                : '오늘 할 가림이 없어요.'
             : isPractice
               ? '일정에는 반영되지 않았어요.'
               : '잘했어요. 내일 또 모여요.'}
@@ -184,12 +184,10 @@ export function ReviewSessionPage() {
             {isPractice ? '연습' : '복습'}{' '}
             <span className="text-[var(--accent)]">{index + 1}</span>/{queue.length}
           </span>
-          {scopeLabel && (
-            <p className="truncate text-xs text-[var(--muted)]">{scopeLabel}</p>
-          )}
-          {isPractice && !scopeLabel && (
-            <p className="text-xs text-[var(--muted)]">일정 미반영</p>
-          )}
+          <p className="truncate text-xs text-[var(--muted)]">
+            {scopeLabel ?? current.fileName.replace(/\.pdf$/i, '')} · {current.page}p
+            {isPractice && !scopeLabel ? ' · 일정 미반영' : ''}
+          </p>
         </div>
         <button
           type="button"
@@ -200,10 +198,6 @@ export function ReviewSessionPage() {
           <X className="h-5 w-5" />
         </button>
       </header>
-
-      <p className="truncate border-b border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--muted)]">
-        {current.fileName.replace(/\.pdf$/i, '')} · p.{current.page}
-      </p>
 
       {error && (
         <p className="px-3 py-2 text-sm text-[var(--danger)]">{error}</p>
@@ -259,7 +253,7 @@ export function ReviewSessionPage() {
           disabled={!revealed}
           onClick={() => void onGrade('good')}
           className={cn(
-            'rounded-xl border-2 border-transparent py-3.5 text-sm font-bold text-white',
+            'min-h-12 rounded-xl border-2 border-transparent py-3.5 text-sm font-bold text-white',
             revealed
               ? 'bg-[var(--accent)] hover:bg-[var(--accent-hover)]'
               : 'cursor-not-allowed bg-[var(--accent)] opacity-40',

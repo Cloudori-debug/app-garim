@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 
 import * as reviewRepo from '@/entities/review/repository'
 import type { ReviewStatsSummary } from '@/entities/review/types'
@@ -28,13 +27,7 @@ export function StatsPage() {
 
   return (
     <div className="h-full overflow-auto px-5 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      <header className="flex items-center justify-between gap-3">
-        <h1 className="text-lg font-bold">통계</h1>
-        <Link to="/" className="text-xs text-[var(--muted)] underline-offset-2 hover:underline">
-          오늘
-        </Link>
-      </header>
-      <p className="mt-1 text-sm text-[var(--muted)]">복습·오답 현황</p>
+      <h1 className="text-lg font-bold">통계</h1>
 
       {loading && !stats ? (
         <p className="mt-10 text-sm text-[var(--muted)]">불러오는 중…</p>
@@ -43,16 +36,14 @@ export function StatsPage() {
       ) : stats ? (
         <>
           <div className="mt-8 grid grid-cols-2 gap-3">
-            <StatCard label="오늘 due" value={stats.due} />
+            <StatCard label="오늘 할 일" value={stats.due} />
             <StatCard label="오늘 복습" value={stats.reviewedToday} />
             <StatCard label="오답 이력" value={stats.weak} hint="한 번 이상 틀림" />
             <StatCard label="전체 가림" value={stats.total} />
           </div>
 
           <section className="mt-10">
-            <h2 className="text-xs font-semibold tracking-wide text-[var(--muted)] uppercase">
-              과목별
-            </h2>
+            <h2 className="text-xs font-medium text-[var(--muted)]">과목별</h2>
             {stats.bySubject.length === 0 ? (
               <p className="mt-3 text-sm text-[var(--muted)]">과목 데이터 없음</p>
             ) : (
@@ -64,7 +55,7 @@ export function StatsPage() {
                   >
                     <span className="min-w-0 truncate font-medium text-[var(--ink)]">{s.name}</span>
                     <span className="shrink-0 tabular-nums text-[var(--muted)]">
-                      due {s.due} · 오답 {s.weak} · {s.total}
+                      할 일 {s.due} · 오답 {s.weak} · {s.total}
                     </span>
                   </li>
                 ))}
@@ -90,7 +81,7 @@ function StatCard({
     <div className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3">
       <p className="text-xs text-[var(--muted)]">{label}</p>
       <p className="mt-1 text-2xl font-bold tabular-nums text-[var(--ink)]">{value}</p>
-      {hint && <p className="mt-0.5 text-[10px] text-[var(--muted)]">{hint}</p>}
+      {hint && <p className="mt-0.5 text-xs text-[var(--muted)]">{hint}</p>}
     </div>
   )
 }

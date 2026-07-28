@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 
 import { useReviewQueue, type DocCount, type SubjectGroup } from '@/features/today/useReviewQueue'
@@ -55,21 +55,13 @@ export function TodayPage() {
 
   return (
     <div className="flex h-full flex-col overflow-auto">
-      <header className="flex shrink-0 items-center justify-between px-5 pt-5 pb-2">
-        <h1 className="text-base font-bold tracking-tight">암기노트</h1>
-        <div className="flex items-center gap-3">
-          <Link to="/stats" className="text-xs text-[var(--muted)] underline-offset-2 hover:underline">
-            통계
-          </Link>
-          <Link to="/more" className="text-xs text-[var(--muted)] underline-offset-2 hover:underline">
-            더보기
-          </Link>
-        </div>
+      <header className="shrink-0 px-5 pt-5 pb-2">
+        <h1 className="text-lg font-bold tracking-tight">암기노트</h1>
       </header>
 
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-16 pt-8">
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-8 pt-6">
         <div className="text-center">
-          <p className="text-xs tracking-wide text-[var(--muted)]">오늘</p>
+          <p className="text-xs text-[var(--muted)]">오늘 복습</p>
           <p className="mt-1 text-6xl font-bold tabular-nums tracking-tight text-[var(--ink)]">
             {loading ? '—' : dueCount}
           </p>
@@ -78,7 +70,6 @@ export function TodayPage() {
         <div className="mt-8 grid gap-2">
           <ModeButton
             label="오늘 복습"
-            meta={dueCount > 0 ? `${dueCount}` : undefined}
             disabled={dueCount <= 0}
             onClick={() => navigate('/review')}
           />
@@ -99,7 +90,7 @@ export function TodayPage() {
         {mode === 'subject' && subjects.length > 0 && (
           <>
             {showSubjectStep && (
-              <section ref={subjectsRef} className="mt-10 scroll-mt-4">
+              <section ref={subjectsRef} className="mt-8 scroll-mt-4">
                 <h2 className="mb-2 text-xs font-medium text-[var(--muted)]">과목</h2>
                 <ul className="divide-y divide-[var(--border)] rounded-xl border border-[var(--border-strong)] bg-[var(--surface)]">
                   {subjects.map((s) => (
@@ -127,7 +118,7 @@ export function TodayPage() {
             )}
 
             {pdfList.length > 0 && (flatPdfs || selectedSubject) && (
-              <section ref={pdfsRef} className="mt-8 scroll-mt-4">
+              <section ref={pdfsRef} className="mt-6 scroll-mt-4">
                 <h2 className="mb-2 text-xs font-medium text-[var(--muted)]">
                   {selectedSubject && showSubjectStep ? selectedSubject.name : 'PDF'}
                 </h2>
