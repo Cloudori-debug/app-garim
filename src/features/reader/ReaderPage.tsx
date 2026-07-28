@@ -26,9 +26,11 @@ import { useMarks } from '@/features/reader/useMarks'
 import {
   isMaxZoom,
   isMinZoom,
+  snapZoomPercent,
   stepZoomPercent,
   ZOOM_PERCENTS,
 } from '@/features/reader/zoomSteps'
+import { usePinchZoom } from '@/features/reader/usePinchZoom'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/lib/cn'
 import {
@@ -62,6 +64,8 @@ export function ReaderPage() {
   const [favoritePages, setFavoritePages] = useState<number[]>([])
   const [fitReady, setFitReady] = useState(false)
   const viewerPaneRef = useRef<HTMLDivElement>(null)
+  // PDF DOM이 마운트된 뒤에만 리스너 부착 (로딩 중 early return 버그 방지)
+  usePinchZoom(viewerPaneRef, zoomPercent, setZoomPercent, Boolean(doc && fileUrl))
 
   const marksApi = useMarks(documentId)
   const pageLayout = doc?.pageLayout ?? 'portrait'
@@ -495,9 +499,9 @@ export function ReaderPage() {
           </Button>
           <select
             aria-label="확대 배율"
-            title="확대 배율"
+            title="확대 배율 (핀치로도 조절)"
             className="h-8 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-1.5 text-xs font-semibold tabular-nums text-[var(--ink)] outline-none focus:border-[var(--accent)]"
-            value={zoomPercent}
+            value={snapZoomPercent(zoomPercent)}
             onChange={(e) => setZoomPercent(Number(e.target.value))}
           >
             {ZOOM_PERCENTS.map((p) => (
@@ -531,7 +535,10 @@ export function ReaderPage() {
           onSelectPage={goToPage}
           onToggleHidden={(p) => void togglePageHidden(p)}
         />
-        <div ref={viewerPaneRef} className="min-h-0 flex-1 overflow-auto bg-[var(--pdf-bg)] p-4">
+        <div
+          ref={viewerPaneRef}
+          className="min-h-0 flex-1 overflow-auto bg-[var(--pdf-bg)] p-4 touch-pan-x touch-pan-y"
+        >
           {filterHidden && visiblePages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
               <EyeOff className="h-8 w-8 text-[var(--muted)]" />

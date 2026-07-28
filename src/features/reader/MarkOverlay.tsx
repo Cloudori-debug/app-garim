@@ -90,6 +90,8 @@ export function MarkOverlay({
       onPointerDown={(e) => {
         if (mode !== 'wordCover') return
         if (e.button !== 0) return
+        // 두 번째 손가락(핀치)은 가림 그리기 시작하지 않음
+        if (!e.isPrimary) return
         if (e.target !== overlayRef.current) return
         const start = getNorm(e.clientX, e.clientY)
         onSelectMark(null)
