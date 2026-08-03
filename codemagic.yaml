@@ -3,7 +3,7 @@
 # 사전 준비 (Codemagic UI에서 1회)
 # 1) https://codemagic.io → GitHub 저장소 Cloudori-debug/app-garim 연결
 # 2) Teams → Integrations → App Store Connect API 키 등록, 이름을 amginote 로 저장
-# 3) App Store Connect에서 앱 "암기노트" (Bundle ID com.clowood.amginote) 생성 후
+# 3) App Store Connect에서 앱 "가림 암기노트" (Bundle ID com.clowood.amginote) 생성 후
 #    General → App Information 의 Apple ID 숫자를 APP_STORE_APPLE_ID 에 넣기
 # 4) Code signing: Automatic / App Store distribution · bundle id 일치 확인
 #
@@ -24,7 +24,7 @@ workflows:
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
         # App Store Connect → 앱 → App Information → Apple ID (숫자)
-        APP_STORE_APPLE_ID: REPLACE_WITH_ASC_APPLE_ID
+        APP_STORE_APPLE_ID: "1099650153"
       node: 22
       xcode: latest
     scripts:

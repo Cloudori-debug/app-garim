@@ -7,7 +7,7 @@
 
 | 항목 | 값 |
 |------|-----|
-| 표시 이름 | 암기노트 |
+| 표시 이름 | 가림 암기노트 |
 | App ID | `com.clowood.amginote` |
 | 웹 (병행) | https://app-garim.pages.dev |
 | 개인정보처리방침 | https://app-garim.pages.dev/privacy.html |

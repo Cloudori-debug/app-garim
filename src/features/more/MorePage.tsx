@@ -75,7 +75,7 @@ export function MorePage() {
       return
     }
     setFeedbackHint(null)
-    const subject = encodeURIComponent('암기노트 의견')
+    const subject = encodeURIComponent('가림 암기노트 의견')
     const body = encodeURIComponent(text)
     window.location.href = `mailto:${FEEDBACK_EMAIL}?subject=${subject}&body=${body}`
   }
@@ -191,7 +191,7 @@ export function MorePage() {
       </div>
 
       <p className="mt-8 text-center text-xs text-[var(--muted)]">
-        암기노트 · 데이터는 이 기기에만 저장됩니다
+        가림 암기노트 · 데이터는 이 기기에만 저장됩니다
       </p>
     </div>
   )

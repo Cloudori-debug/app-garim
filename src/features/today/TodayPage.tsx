@@ -56,7 +56,7 @@ export function TodayPage() {
   return (
     <div className="flex h-full flex-col overflow-auto">
       <header className="shrink-0 px-5 pt-5 pb-2">
-        <h1 className="text-lg font-bold tracking-tight">암기노트</h1>
+        <h1 className="text-lg font-bold tracking-tight">가림 암기노트</h1>
       </header>
 
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-8 pt-6">

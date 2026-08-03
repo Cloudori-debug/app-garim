@@ -1,6 +1,6 @@
 {
-  "name": "암기노트",
-  "short_name": "암기노트",
+  "name": "가림 암기노트",
+  "short_name": "가림 암기노트",
   "description": "내 PDF를 가리고 외우고, 잊기 전에 다시 물어보는 로컬 암기 노트",
   "start_url": "/",
   "scope": "/",

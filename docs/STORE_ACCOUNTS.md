@@ -6,7 +6,7 @@
 
 | 항목 | 값 |
 |------|-----|
-| 앱 이름 | 암기노트 |
+| 앱 이름 | 가림 암기노트 |
 | Bundle / Application ID | `com.clowood.amginote` |
 | 개인정보처리방침 | https://app-garim.pages.dev/privacy.html |
 | 지원 URL (임시) | https://app-garim.pages.dev |
@@ -18,10 +18,10 @@
 
 1. [App Store Connect](https://appstoreconnect.apple.com/) → **나의 앱** → **+** → 신규 앱  
    - 플랫폼: iOS  
-   - 이름: 암기노트  
+   - 이름: 가림 암기노트  
    - Bundle ID: `com.clowood.amginote` (없으면 Certificates, Identifiers & Profiles에서 먼저 등록)  
-2. 앱 생성 후 **앱 정보 → Apple ID**(숫자)를 복사  
-3. 저장소 `codemagic.yaml`의 `APP_STORE_APPLE_ID: REPLACE_WITH_ASC_APPLE_ID`를 그 숫자로 바꾼 뒤 커밋  
+2. 앱 생성 후 **앱 정보 → Apple ID**(숫자)를 복사 — 현재: `1099650153`  
+3. 저장소 `codemagic.yaml`의 `APP_STORE_APPLE_ID`에 반영됨  
 4. **암호화 수출 규정**: 앱은 HTTPS만 사용 → 보통 “표준 암호화만 사용” / Info.plist에 `ITSAppUsesNonExemptEncryption=false` 반영됨  
 
 ### App Store Connect API 키 (Codemagic용)
@@ -44,7 +44,7 @@
 ## B. Google Play Console (안드로이드)
 
 1. [Play Console](https://play.google.com/console) → 앱 만들기  
-   - 앱 이름: 암기노트  
+   - 앱 이름: 가림 암기노트  
    - 기본 언어: 한국어  
    - 앱/게임: 앱 · 무료  
 2. 대시보드 필수 항목 채우기 (개인정보처리방침 URL 포함)  
