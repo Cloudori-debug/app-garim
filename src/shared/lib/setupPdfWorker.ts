@@ -11,4 +11,8 @@ export const PDFJS_DOC_OPTIONS = {
   cMapUrl: '/cmaps/',
   cMapPacked: true,
   standardFontDataUrl: '/standard_fonts/',
+  // 전체 파일을 미리 긁지 않고 요청 페이지 위주로 (Blob에서도 파싱 부하↓)
+  disableAutoFetch: true,
+  disableStream: false,
+  isEvalSupported: false,
 } as const

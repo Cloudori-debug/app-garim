@@ -18,7 +18,7 @@ import * as documentRepo from '@/entities/document/repository'
 import * as pageFavoriteRepo from '@/entities/pageFavorite/repository'
 import type { Document } from '@/entities/document/types'
 import type { MarkColor } from '@/entities/mark/types'
-import { clampFitScale, measurePdfPageSize } from '@/features/reader/fitScale'
+import { clampFitScale } from '@/features/reader/fitScale'
 import { PdfViewer } from '@/features/reader/PdfViewer'
 import { PageThumbnailRail } from '@/features/reader/PageThumbnailRail'
 import type { ReaderMode } from '@/features/reader/types'
@@ -63,6 +63,7 @@ export function ReaderPage() {
   const [pageBookmarked, setPageBookmarked] = useState(false)
   const [favoritePages, setFavoritePages] = useState<number[]>([])
   const [fitReady, setFitReady] = useState(false)
+  const [showThumbRail, setShowThumbRail] = useState(false)
   const viewerPaneRef = useRef<HTMLDivElement>(null)
   // PDF DOM이 마운트된 뒤에만 리스너 부착 (로딩 중 early return 버그 방지)
   usePinchZoom(viewerPaneRef, zoomPercent, setZoomPercent, Boolean(doc && fileUrl))
@@ -179,42 +180,34 @@ export function ReaderPage() {
   useEffect(() => {
     setFitReady(false)
     setZoomPercent(100)
+    setShowThumbRail(false)
   }, [documentId, fileUrl, pageLayout])
 
+  /** 첫 페이지가 뜬 뒤 책장 로드 — 초기 열기 속도 우선 */
   useEffect(() => {
-    if (!fileUrl || !doc || fitReady) return
+    if (!fileUrl || !doc) return
+    const t = window.setTimeout(() => setShowThumbRail(true), 450)
+    return () => window.clearTimeout(t)
+  }, [fileUrl, doc])
+
+  const applyFitFromBaseSize = (size: { width: number; height: number }) => {
     const el = viewerPaneRef.current
-    if (!el) return
-    let cancelled = false
-
-    void (async () => {
-      const size = await measurePdfPageSize(fileUrl)
-      if (cancelled || !size) {
-        if (!cancelled) {
-          setScale(pageLayout === 'landscape' ? 1.65 : 1.1)
-          setZoomPercent(100)
-          setFitReady(true)
-        }
-        return
-      }
-      const next = clampFitScale(
-        size.width,
-        size.height,
-        el.clientWidth,
-        el.clientHeight,
-        pageLayout,
-      )
-      if (!cancelled) {
-        setScale(Math.round(next * 100) / 100)
-        setZoomPercent(100)
-        setFitReady(true)
-      }
-    })()
-
-    return () => {
-      cancelled = true
+    if (!el || !doc) {
+      setScale(pageLayout === 'landscape' ? 1.65 : 1.1)
+      setFitReady(true)
+      return
     }
-  }, [fileUrl, doc, pageLayout, fitReady])
+    const next = clampFitScale(
+      size.width,
+      size.height,
+      el.clientWidth,
+      el.clientHeight,
+      pageLayout,
+    )
+    setScale(Math.round(next * 100) / 100)
+    setZoomPercent(100)
+    setFitReady(true)
+  }
 
   /** 학습/단어가림: 숨긴 페이지에 있으면 가까운 보이는 페이지로 */
   useEffect(() => {
@@ -546,18 +539,25 @@ export function ReaderPage() {
       </div>
 
       <div className="flex min-h-0 flex-1">
-        <PageThumbnailRail
-          fileUrl={fileUrl}
-          pages={railPages}
-          pageCount={pageCount}
-          currentPage={page}
-          markCounts={markCounts}
-          favoritePages={favoritePages}
-          hiddenPages={hiddenPages}
-          pageCoverMode={pageCoverMode}
-          onSelectPage={goToPage}
-          onToggleHidden={(p) => void togglePageHidden(p)}
-        />
+        {showThumbRail ? (
+          <PageThumbnailRail
+            fileUrl={fileUrl}
+            pages={railPages}
+            pageCount={pageCount}
+            currentPage={page}
+            markCounts={markCounts}
+            favoritePages={favoritePages}
+            hiddenPages={hiddenPages}
+            pageCoverMode={pageCoverMode}
+            onSelectPage={goToPage}
+            onToggleHidden={(p) => void togglePageHidden(p)}
+          />
+        ) : (
+          <aside
+            className="hidden w-[92px] shrink-0 border-r border-[var(--border)] bg-[var(--surface)] sm:block"
+            aria-hidden
+          />
+        )}
         <div
           ref={viewerPaneRef}
           className="min-h-0 flex-1 overflow-auto bg-[var(--pdf-bg)] p-4 touch-pan-x touch-pan-y"
@@ -581,7 +581,8 @@ export function ReaderPage() {
                 scale={scale}
                 zoomFactor={zoomPercent / 100}
                 mode={mode}
-                continuousScroll
+                /* 짧은 PDF만 연속 스크롤 — 대용량은 단페이지로 즉시 표시 */
+                continuousScroll={pageCount > 0 && pageCount <= 40}
                 marks={marksApi.marks}
                 selectedMarkId={selectedMarkId}
                 onSelectMark={setSelectedMarkId}
@@ -589,6 +590,9 @@ export function ReaderPage() {
                 onPageCount={(n) => {
                   setPageCount(n)
                   if (doc.pageCount !== n) void documentRepo.updatePageCount(doc.id, n)
+                }}
+                onBasePageSize={(size) => {
+                  if (!fitReady) applyFitFromBaseSize(size)
                 }}
                 onCreateMark={(markPage, rect) => {
                   void marksApi.create({ page: markPage, color, ...rect }).then((mark) => {

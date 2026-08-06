@@ -11,6 +11,7 @@ import { PDFJS_DOC_OPTIONS } from '@/shared/lib/setupPdfWorker'
 /** 연속 스크롤에서 실제로 캔버스를 그릴 페이지 반경(현재 ±N) */
 const RENDER_RADIUS = 2
 const DEFAULT_PAGE_HEIGHT = 900
+const PAGE_GAP = 16
 
 interface PdfViewerProps {
   fileUrl: string
@@ -30,6 +31,8 @@ interface PdfViewerProps {
   onSelectMark: (id: string | null) => void
   onPageChange?: (page: number) => void
   onPageCount: (n: number) => void
+  /** 1페이지 원본(scale=1) 크기 — fit 배율 계산용. 별도 getDocument 없이 사용 */
+  onBasePageSize?: (size: { width: number; height: number }) => void
   onCreateMark: (page: number, rect: { x: number; y: number; w: number; h: number }) => void
   onUpdateGeometry: (id: string, rect: { x: number; y: number; w: number; h: number }) => void
   onDeleteMark: (id: string) => void
@@ -152,6 +155,7 @@ export function PdfViewer({
   onSelectMark,
   onPageChange,
   onPageCount,
+  onBasePageSize,
   onCreateMark,
   onUpdateGeometry,
   onDeleteMark,
@@ -164,6 +168,12 @@ export function PdfViewer({
   const heightsRef = useRef(new Map<number, number>())
   const [docPages, setDocPages] = useState(pageCount)
   const [estHeight, setEstHeight] = useState(DEFAULT_PAGE_HEIGHT)
+
+  const reportedBase = useRef(false)
+
+  useEffect(() => {
+    reportedBase.current = false
+  }, [fileUrl])
 
   useEffect(() => {
     void pdfjs.version
@@ -191,6 +201,29 @@ export function PdfViewer({
     }, 120)
     return () => window.clearTimeout(t)
   }, [page, continuousScroll, pages, activeIndex])
+
+  /** spacer 가상화: 스크롤 위치로 현재 페이지 추정 */
+  useEffect(() => {
+    if (!continuousScroll || !onPageChange) return
+    const probe = pageEls.current.get(page)
+    const root = probe?.closest('.overflow-auto') as HTMLElement | null
+    if (!root) return
+
+    const onScroll = () => {
+      if (skipObserver.current) return
+      const stride = estHeight + PAGE_GAP
+      if (stride <= 0) return
+      const idx = Math.min(
+        pages.length - 1,
+        Math.max(0, Math.round((root.scrollTop + 8) / stride)),
+      )
+      const next = pages[idx]
+      if (next && next !== page) onPageChange(next)
+    }
+
+    root.addEventListener('scroll', onScroll, { passive: true })
+    return () => root.removeEventListener('scroll', onScroll)
+  }, [continuousScroll, onPageChange, page, pages, estHeight, activeIndex])
 
   useEffect(() => {
     if (!continuousScroll || !onPageChange) return
@@ -241,45 +274,52 @@ export function PdfViewer({
       onLoadSuccess={(doc) => {
         setDocPages(doc.numPages)
         onPageCount(doc.numPages)
+        if (!reportedBase.current && onBasePageSize) {
+          reportedBase.current = true
+          void doc.getPage(1).then((p) => {
+            const viewport = p.getViewport({ scale: 1 })
+            onBasePageSize({ width: viewport.width, height: viewport.height })
+          })
+        }
       }}
     >
       {continuousScroll ? (
-        <div className="flex flex-col items-center gap-4 pb-8">
-          {pages.map((pageNumber, index) => {
-            const near = Math.abs(index - activeIndex) <= RENDER_RADIUS
-            if (!near) {
-              const h = heightsRef.current.get(pageNumber) ?? estHeight
-              return (
-                <div
-                  key={pageNumber}
-                  ref={setPageRef(pageNumber)}
-                  data-page={pageNumber}
-                  className="mx-auto w-full max-w-[960px] rounded-sm bg-[var(--surface)]/80"
-                  style={{ height: h }}
-                  aria-hidden
-                />
-              )
-            }
+        <div className="flex flex-col items-center pb-8">
+          {(() => {
+            const start = Math.max(0, activeIndex - RENDER_RADIUS)
+            const end = Math.min(pages.length, activeIndex + RENDER_RADIUS + 1)
+            const topH = start * (estHeight + PAGE_GAP)
+            const bottomCount = Math.max(0, pages.length - end)
+            const bottomH = bottomCount * (estHeight + PAGE_GAP)
+            const slice = pages.slice(start, end)
             return (
-              <PageBlock
-                key={pageNumber}
-                pageNumber={pageNumber}
-                scale={scale}
-                zoomFactor={zoomFactor}
-                mode={mode}
-                marks={marks}
-                selectedMarkId={selectedMarkId}
-                onSelectMark={onSelectMark}
-                onCreateMark={onCreateMark}
-                onUpdateGeometry={onUpdateGeometry}
-                onDeleteMark={onDeleteMark}
-                onToggleStudy={onToggleStudy}
-                onToggleFavorite={onToggleFavorite}
-                pageRef={setPageRef(pageNumber)}
-                onMeasured={onMeasured}
-              />
+              <>
+                {topH > 0 && <div style={{ height: topH }} aria-hidden />}
+                <div className="flex w-full flex-col items-center gap-4">
+                  {slice.map((pageNumber) => (
+                    <PageBlock
+                      key={pageNumber}
+                      pageNumber={pageNumber}
+                      scale={scale}
+                      zoomFactor={zoomFactor}
+                      mode={mode}
+                      marks={marks}
+                      selectedMarkId={selectedMarkId}
+                      onSelectMark={onSelectMark}
+                      onCreateMark={onCreateMark}
+                      onUpdateGeometry={onUpdateGeometry}
+                      onDeleteMark={onDeleteMark}
+                      onToggleStudy={onToggleStudy}
+                      onToggleFavorite={onToggleFavorite}
+                      pageRef={setPageRef(pageNumber)}
+                      onMeasured={onMeasured}
+                    />
+                  ))}
+                </div>
+                {bottomH > 0 && <div style={{ height: bottomH }} aria-hidden />}
+              </>
             )
-          })}
+          })()}
         </div>
       ) : (
         <PageBlock
@@ -295,6 +335,7 @@ export function PdfViewer({
           onDeleteMark={onDeleteMark}
           onToggleStudy={onToggleStudy}
           onToggleFavorite={onToggleFavorite}
+          onMeasured={onMeasured}
         />
       )}
     </PdfDocument>
