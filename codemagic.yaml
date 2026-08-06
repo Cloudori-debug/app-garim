@@ -1,13 +1,12 @@
-# Codemagic — 암기노트 (Capacitor 8 · SPM)
+# Codemagic — 가림 암기노트 (Capacitor 8 · SPM)
 
-# 사전 준비 (Codemagic UI에서 1회)
-# 1) https://codemagic.io → GitHub 저장소 Cloudori-debug/app-garim 연결
-# 2) Teams → Integrations → App Store Connect API 키 등록, 이름을 amginote 로 저장
-# 3) App Store Connect에서 앱 "가림 암기노트" (Bundle ID com.clowood.amginote) 생성 후
-#    General → App Information 의 Apple ID 숫자를 APP_STORE_APPLE_ID 에 넣기
-# 4) Code signing: Automatic / App Store distribution · bundle id 일치 확인
+# 사전 준비 (Personal 계정 · Mac 불필요)
+# 1) Integrations → Developer Portal → API 키 이름: amginote
+# 2) Environment variables 그룹 `ios_signing` 에 CERTIFICATE_PRIVATE_KEY 추가
+#    (로컬에서: openssl genrsa 2048  → 개인키 PEM 전체 붙여넣기)
+# 3) Start build → Workflow: iOS TestFlight
 #
-# 문서: docs/STORE_ACCOUNTS.md
+# 문서: docs/APP_STORE_LAUNCH.md
 
 workflows:
   ios-testflight:
@@ -17,13 +16,12 @@ workflows:
     integrations:
       app_store_connect: amginote
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.clowood.amginote
+      groups:
+        - ios_signing
       vars:
+        BUNDLE_ID: com.clowood.amginote
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
-        # App Store Connect → 앱 → App Information → Apple ID (숫자)
         APP_STORE_APPLE_ID: "1099650153"
       node: 22
       xcode: latest
@@ -35,7 +33,18 @@ workflows:
         script: |
           npm run build
           npx cap sync ios
-      - name: Set up code signing
+      - name: Set up keychain
+        script: |
+          keychain initialize
+      - name: Fetch or create signing files
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+      - name: Add certificates to keychain
+        script: |
+          keychain add-certificates
+      - name: Set up code signing on Xcode project
         script: |
           xcode-project use-profiles
       - name: Increment build number
@@ -43,6 +52,7 @@ workflows:
           cd ios/App
           LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
           agvtool new-version -all $((LATEST + 1))
+          agvtool new-marketing-version 1.4.0
       - name: Build ipa
         script: |
           xcode-project build-ipa \
@@ -66,9 +76,6 @@ workflows:
     name: Android Play Internal
     instance_type: linux_x2
     max_build_duration: 60
-    # Play Console 서비스 계정 JSON을 Codemagic에 올린 뒤 아래 주석을 해제하세요.
-    # integrations:
-    #   google_play: amginote-play
     environment:
       android_signing:
         - amginote
@@ -90,8 +97,3 @@ workflows:
           ./gradlew bundleRelease
     artifacts:
       - android/app/build/outputs/bundle/release/*.aab
-    # publishing:
-    #   google_play:
-    #     credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-    #     track: internal
-    #     submit_as_draft: true

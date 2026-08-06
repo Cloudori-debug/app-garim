@@ -9,7 +9,8 @@
 | **v1.2** | 실사용 안정화 | **동결** (2026-07-28) |
 | **v1.3** | 통계·일괄 열기/닫기·의견 보내기 | **동결** (2026-07-29) — 웹 무료 공개 |
 | **v1.4** | Capacitor 스토어 트랙 | Android 실행 + iOS 프로젝트·클라우드 빌드 경로 |
-| **다음** | 스토어 검증 후 | TestFlight/Play 내부 → 반응 보고 유료·기능 확장 |
+| **v1.5** | App Store 출시 | Codemagic TestFlight → 심사 제출 (Mac 없이) |
+| **다음** | 스토어 검증 후 | 반응 보고 유료·기능 확장 |
 
 ### 출시 운영 (현재)
 
@@ -19,7 +20,7 @@
 4. **의견 수집** — 더보기 → 의견 보내기
 5. 스토어 반응을 본 뒤 **유료** vs **무료 확장** 결정 (결제 구현은 그전까지 보류)
 
-자세한 절차: `docs/STORE_RELEASE.md` · 계정 연결: `docs/STORE_ACCOUNTS.md`
+자세한 절차: `docs/STORE_RELEASE.md` · 계정 연결: `docs/STORE_ACCOUNTS.md` · **애플 출시: `docs/APP_STORE_LAUNCH.md`**
 
 ### 무료 → 유료 (가설, 확정 전)
 

@@ -30,6 +30,8 @@ android/.idea/
 *.aab
 *.keystore
 *.jks
+*.key
+amginote-cert.key
 
 # Capacitor / iOS local (Mac·CI에서 생성)
 ios/App/Pods/
