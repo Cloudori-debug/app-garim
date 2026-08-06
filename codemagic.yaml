@@ -22,7 +22,7 @@ workflows:
         BUNDLE_ID: com.clowood.amginote
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
-        APP_STORE_APPLE_ID: "1099650153"
+        APP_STORE_APPLE_ID: "6797558440"
       node: 22
       xcode: latest
     scripts:

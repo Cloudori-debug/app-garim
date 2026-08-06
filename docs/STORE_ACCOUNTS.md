@@ -20,9 +20,21 @@
    - 플랫폼: iOS  
    - 이름: 가림 암기노트  
    - Bundle ID: `com.clowood.amginote` (없으면 Certificates, Identifiers & Profiles에서 먼저 등록)  
-2. 앱 생성 후 **앱 정보 → Apple ID**(숫자)를 복사 — 현재: `1099650153`  
+2. 앱 생성 후 **앱 정보 → Apple ID**(숫자)를 복사 — 현재: `6797558440`  
 3. 저장소 `codemagic.yaml`의 `APP_STORE_APPLE_ID`에 반영됨  
 4. **암호화 수출 규정**: 앱은 HTTPS만 사용 → 보통 “표준 암호화만 사용” / Info.plist에 `ITSAppUsesNonExemptEncryption=false` 반영됨  
+
+### TestFlight 테스트 정보 (업로드 후 필수)
+
+빌드 IPA는 올라가지만, 외부 테스트/베타 심사 제출 전에 아래를 채워야 합니다.
+
+1. https://appstoreconnect.apple.com/apps/6797558440/testflight/test-info  
+2. **Beta App Information**
+   - Feedback Email: `clowood.cy@gmail.com` (또는 본인 메일)
+3. **Beta App Review Information**
+   - First Name / Last Name / Phone / Email  
+4. 저장 후 Codemagic **iOS TestFlight** 다시 빌드하거나, ASC에서 해당 빌드로 테스터 배포
+  
 
 ### App Store Connect API 키 (Codemagic용)
 

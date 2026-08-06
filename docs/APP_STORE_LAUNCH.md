@@ -1,6 +1,6 @@
 # 애플 App Store 출시 (Mac 없이)
 
-가림 암기노트 · Bundle ID `com.clowood.amginote` · Apple ID `1099650153`
+가림 암기노트 · Bundle ID `com.clowood.amginote` · Apple ID `6797558440`
 
 ## 지금 할 일 (순서)
 
@@ -116,5 +116,6 @@ PDF 가리고 오늘 복습
 | API 키 인증 실패 | Integrations 키 이름이 정확히 `amginote`인지 |
 | Distribution 인증서 한도 | developer.apple.com에서 오래된 Distribution 인증서 삭제 후 재빌드 |
 | TestFlight 처리 중 오래 걸림 | 빌드 처리에 수분~수십 분 소요 정상 |
+| post-processing failed · Beta App Information | https://appstoreconnect.apple.com/apps/6797558440/testflight/test-info 에서 Feedback Email·심사 연락처 입력 |
 
 성공/실패 로그 일부를 보내 주시면 다음 조치를 이어서 잡습니다.
