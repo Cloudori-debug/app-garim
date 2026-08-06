@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Document, Page } from 'react-pdf'
 import { Bookmark, EyeOff } from 'lucide-react'
 
@@ -7,6 +7,7 @@ import { PDFJS_DOC_OPTIONS } from '@/shared/lib/setupPdfWorker'
 import '@/shared/lib/setupPdfWorker'
 
 const THUMB_WIDTH = 72
+const THUMB_BODY_H = Math.round(THUMB_WIDTH * 1.35)
 
 interface PageThumbnailRailProps {
   fileUrl: string
@@ -26,6 +27,58 @@ interface PageThumbnailRailProps {
   onToggleHidden?: (page: number) => void
 }
 
+function LazyThumbPage({
+  pageNumber,
+  root,
+}: {
+  pageNumber: number
+  root: HTMLElement | null
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        setVisible(Boolean(entry?.isIntersecting))
+      },
+      { root, rootMargin: '120px 0px', threshold: 0.01 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [root])
+
+  return (
+    <div ref={ref} style={{ width: THUMB_WIDTH, height: THUMB_BODY_H }}>
+      {visible ? (
+        <Page
+          pageNumber={pageNumber}
+          width={THUMB_WIDTH}
+          renderTextLayer={false}
+          renderAnnotationLayer={false}
+          loading={
+            <div
+              className="flex items-center justify-center bg-[var(--bg)] text-[10px] text-[var(--muted)]"
+              style={{ width: THUMB_WIDTH, height: THUMB_BODY_H }}
+            >
+              …
+            </div>
+          }
+        />
+      ) : (
+        <div
+          className="flex items-center justify-center bg-[var(--bg)] text-[10px] tabular-nums text-[var(--muted)]"
+          style={{ width: THUMB_WIDTH, height: THUMB_BODY_H }}
+        >
+          {pageNumber}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function PageThumbnailRail({
   fileUrl,
   pages: pagesProp,
@@ -39,6 +92,7 @@ export function PageThumbnailRail({
   onToggleHidden,
 }: PageThumbnailRailProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null)
   const thumbRefs = useRef(new Map<number, HTMLButtonElement>())
   const file = useMemo(() => ({ url: fileUrl }), [fileUrl])
   const pages = useMemo(() => {
@@ -53,6 +107,10 @@ export function PageThumbnailRail({
     if (!hiddenPages) return new Set<number>()
     return hiddenPages instanceof Set ? hiddenPages : new Set(hiddenPages)
   }, [hiddenPages])
+
+  useEffect(() => {
+    setScrollRoot(scrollRef.current)
+  }, [])
 
   useEffect(() => {
     const root = scrollRef.current
@@ -101,20 +159,7 @@ export function PageThumbnailRail({
                     hidden && 'opacity-40',
                   )}
                 >
-                  <Page
-                    pageNumber={p}
-                    width={THUMB_WIDTH}
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                    loading={
-                      <div
-                        className="flex items-center justify-center bg-[var(--bg)] text-[10px] text-[var(--muted)]"
-                        style={{ width: THUMB_WIDTH, height: THUMB_WIDTH * 1.35 }}
-                      >
-                        …
-                      </div>
-                    }
-                  />
+                  <LazyThumbPage pageNumber={p} root={scrollRoot} />
                   <span
                     className={cn(
                       'block py-0.5 text-center text-[10px] font-semibold tabular-nums',

@@ -8,6 +8,10 @@ import type { ReaderMode } from '@/features/reader/types'
 import '@/shared/lib/setupPdfWorker'
 import { PDFJS_DOC_OPTIONS } from '@/shared/lib/setupPdfWorker'
 
+/** 연속 스크롤에서 실제로 캔버스를 그릴 페이지 반경(현재 ±N) */
+const RENDER_RADIUS = 2
+const DEFAULT_PAGE_HEIGHT = 900
+
 interface PdfViewerProps {
   fileUrl: string
   page: number
@@ -47,6 +51,7 @@ function PageBlock({
   onToggleStudy,
   onToggleFavorite,
   pageRef,
+  onMeasured,
 }: {
   pageNumber: number
   scale: number
@@ -61,10 +66,15 @@ function PageBlock({
   onToggleStudy: (id: string) => void
   onToggleFavorite: (id: string, isFavorite: boolean) => void
   pageRef?: (el: HTMLDivElement | null) => void
+  onMeasured?: (pageNumber: number, width: number, height: number) => void
 }) {
   const [pageSize, setPageSize] = useState({ width: 0, height: 0 })
   const z = zoomFactor > 0 ? zoomFactor : 1
   const sized = pageSize.width > 0 && pageSize.height > 0
+  const pageMarks = useMemo(
+    () => marks.filter((m) => m.page === pageNumber),
+    [marks, pageNumber],
+  )
 
   return (
     <div
@@ -103,11 +113,12 @@ function PageBlock({
             onRenderSuccess={(pageProxy) => {
               const viewport = pageProxy.getViewport({ scale })
               setPageSize({ width: viewport.width, height: viewport.height })
+              onMeasured?.(pageNumber, viewport.width * z, viewport.height * z)
             }}
           />
           {sized && (
             <MarkOverlay
-              marks={marks}
+              marks={pageMarks}
               page={pageNumber}
               pageWidth={pageSize.width}
               pageHeight={pageSize.height}
@@ -150,7 +161,9 @@ export function PdfViewer({
   const file = useMemo(() => ({ url: fileUrl }), [fileUrl])
   const pageEls = useRef(new Map<number, HTMLDivElement>())
   const skipObserver = useRef(false)
+  const heightsRef = useRef(new Map<number, number>())
   const [docPages, setDocPages] = useState(pageCount)
+  const [estHeight, setEstHeight] = useState(DEFAULT_PAGE_HEIGHT)
 
   useEffect(() => {
     void pdfjs.version
@@ -162,6 +175,11 @@ export function PdfViewer({
     return Array.from({ length: total }, (_, i) => i + 1)
   }, [pagesProp, total])
 
+  const activeIndex = useMemo(() => {
+    const idx = pages.indexOf(page)
+    return idx >= 0 ? idx : 0
+  }, [pages, page])
+
   useLayoutEffect(() => {
     if (!continuousScroll) return
     const el = pageEls.current.get(page)
@@ -172,7 +190,7 @@ export function PdfViewer({
       skipObserver.current = false
     }, 120)
     return () => window.clearTimeout(t)
-  }, [page, continuousScroll, pages])
+  }, [page, continuousScroll, pages, activeIndex])
 
   useEffect(() => {
     if (!continuousScroll || !onPageChange) return
@@ -194,16 +212,24 @@ export function PdfViewer({
         const next = visible[0]?.page
         if (next && next !== page) onPageChange(next)
       },
-      { root: null, threshold: [0.2, 0.4, 0.6] },
+      { root: null, threshold: [0.15, 0.35, 0.55] },
     )
 
     nodes.forEach((n) => observer.observe(n))
     return () => observer.disconnect()
-  }, [continuousScroll, onPageChange, page, pages, fileUrl, zoomFactor])
+  }, [continuousScroll, onPageChange, page, pages, fileUrl, zoomFactor, activeIndex, estHeight])
 
   const setPageRef = (pageNumber: number) => (el: HTMLDivElement | null) => {
     if (el) pageEls.current.set(pageNumber, el)
     else pageEls.current.delete(pageNumber)
+  }
+
+  const onMeasured = (pageNumber: number, width: number, height: number) => {
+    heightsRef.current.set(pageNumber, height)
+    if (height > 0 && (estHeight === DEFAULT_PAGE_HEIGHT || Math.abs(height - estHeight) > 40)) {
+      setEstHeight(height)
+    }
+    void width
   }
 
   return (
@@ -219,24 +245,41 @@ export function PdfViewer({
     >
       {continuousScroll ? (
         <div className="flex flex-col items-center gap-4 pb-8">
-          {pages.map((pageNumber) => (
-            <PageBlock
-              key={pageNumber}
-              pageNumber={pageNumber}
-              scale={scale}
-              zoomFactor={zoomFactor}
-              mode={mode}
-              marks={marks}
-              selectedMarkId={selectedMarkId}
-              onSelectMark={onSelectMark}
-              onCreateMark={onCreateMark}
-              onUpdateGeometry={onUpdateGeometry}
-              onDeleteMark={onDeleteMark}
-              onToggleStudy={onToggleStudy}
-              onToggleFavorite={onToggleFavorite}
-              pageRef={setPageRef(pageNumber)}
-            />
-          ))}
+          {pages.map((pageNumber, index) => {
+            const near = Math.abs(index - activeIndex) <= RENDER_RADIUS
+            if (!near) {
+              const h = heightsRef.current.get(pageNumber) ?? estHeight
+              return (
+                <div
+                  key={pageNumber}
+                  ref={setPageRef(pageNumber)}
+                  data-page={pageNumber}
+                  className="mx-auto w-full max-w-[960px] rounded-sm bg-[var(--surface)]/80"
+                  style={{ height: h }}
+                  aria-hidden
+                />
+              )
+            }
+            return (
+              <PageBlock
+                key={pageNumber}
+                pageNumber={pageNumber}
+                scale={scale}
+                zoomFactor={zoomFactor}
+                mode={mode}
+                marks={marks}
+                selectedMarkId={selectedMarkId}
+                onSelectMark={onSelectMark}
+                onCreateMark={onCreateMark}
+                onUpdateGeometry={onUpdateGeometry}
+                onDeleteMark={onDeleteMark}
+                onToggleStudy={onToggleStudy}
+                onToggleFavorite={onToggleFavorite}
+                pageRef={setPageRef(pageNumber)}
+                onMeasured={onMeasured}
+              />
+            )
+          })}
         </div>
       ) : (
         <PageBlock
