@@ -1,6 +1,14 @@
 /* 앱 셸 캐시 — PDF·IndexedDB 데이터는 건드리지 않음 */
-const CACHE = 'amgi-shell-v1'
-const PRECACHE = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg', '/apple-touch-icon.png']
+const CACHE = 'amgi-shell-v2'
+const PRECACHE = [
+  '/',
+  '/index.html',
+  '/manifest.webmanifest',
+  '/favicon.svg',
+  '/apple-touch-icon.png',
+  '/icon-192.png',
+  '/icon-512.png',
+]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

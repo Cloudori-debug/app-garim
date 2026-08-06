@@ -55,11 +55,11 @@ export function TodayPage() {
 
   return (
     <div className="flex h-full flex-col overflow-auto">
-      <header className="shrink-0 px-5 pt-5 pb-2">
-        <h1 className="text-lg font-bold tracking-tight">가림 암기노트</h1>
+      <header className="shrink-0 px-5 pt-4 pb-2 md:px-8">
+        <h1 className="text-lg font-bold tracking-tight md:text-xl">가림 암기노트</h1>
       </header>
 
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-8 pt-6">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-5 pb-8 pt-6 md:px-8">
         <div className="text-center">
           <p className="text-xs text-[var(--muted)]">오늘 복습</p>
           <p className="mt-1 text-6xl font-bold tabular-nums tracking-tight text-[var(--ink)]">

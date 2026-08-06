@@ -12,7 +12,7 @@ const tabs = [
 
 export function AppShell() {
   return (
-    <div className="flex h-full flex-col bg-[var(--bg)] text-[var(--ink)]">
+    <div className="flex h-full flex-col bg-[var(--bg)] pt-[env(safe-area-inset-top)] text-[var(--ink)]">
       <div className="min-h-0 flex-1 overflow-hidden">
         <Outlet />
       </div>

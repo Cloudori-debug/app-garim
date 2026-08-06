@@ -178,14 +178,27 @@ export function MorePage() {
         <section>
           <h2 className="text-xs font-medium text-[var(--muted)]">홈 화면에 추가</h2>
           <div className={cn(cardClass, 'mt-2 px-4 py-3')}>
-            <ol className="list-decimal space-y-1 pl-5 text-sm text-[var(--muted)]">
+            <p className="text-sm text-[var(--ink)]">
+              Safari로{' '}
+              <a
+                href="https://app-garim.pages.dev"
+                className="font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
+              >
+                app-garim.pages.dev
+              </a>
+              를 연 뒤:
+            </p>
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[var(--muted)]">
               <li>
-                <span className="text-[var(--ink)]">Safari</span>에서 공유 버튼
+                <span className="text-[var(--ink)]">공유</span> 버튼
               </li>
               <li>
                 <span className="text-[var(--ink)]">홈 화면에 추가</span>
               </li>
             </ol>
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              홈 화면 아이콘으로 전체 화면처럼 실행됩니다. PDF·가림은 이 기기에만 저장됩니다.
+            </p>
           </div>
         </section>
       </div>

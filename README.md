@@ -1,16 +1,27 @@
-# app_garim (암기노트)
+# app_garim (가림 암기노트)
 
 내 PDF에 가리고 외우고, **오늘 복습**으로 잊기 전에 다시 물어보는 로컬 웹 앱.
 
-프로젝트 폴더/패키지 이름: `app_garim` · 제품명: 암기노트
+프로젝트 폴더/패키지 이름: `app_garim` · 제품명: **가림 암기노트**
 
-## 아이패드에서 쓰기
+## 아이패드에서 쓰기 (우선 출시)
 
-공시생 아이패드 사용을 우선합니다. **App Store가 아니라** Safari / 홈 화면 추가(PWA)로 배포합니다.
+공시생 아이패드 사용을 우선합니다. **지금은 Safari / 홈 화면 추가(PWA)** 로 씁니다.  
+고정 주소: **https://app-garim.pages.dev**
 
-1. PC에서 한 번: `npx wrangler login` → `npm run deploy`
-2. 나온 `https://….pages.dev` 주소를 아이패드 Safari에서 열기 → **공유 → 홈 화면에 추가**
-3. 자세한 절차: [docs/DEPLOY_IPAD.md](./docs/DEPLOY_IPAD.md)
+1. 아이패드 **Safari**로 위 주소를 엽니다.
+2. **공유 → 홈 화면에 추가**
+3. 홈 화면 **가림 암기노트** 아이콘으로 실행
+
+PC에서 다시 배포할 때:
+
+```bash
+npx wrangler login   # 1회
+npm run deploy
+```
+
+자세한 절차: [docs/DEPLOY_IPAD.md](./docs/DEPLOY_IPAD.md)  
+(스토어 네이티브는 별도 — [docs/STORE_RELEASE.md](./docs/STORE_RELEASE.md))
 
 ## 실행 방법 (가장 쉬움)
 
@@ -33,8 +44,7 @@ npm run build
 npm run preview -- --host
 ```
 
-> 진짜 Windows `.exe` / App Store 앱은 아직 없습니다.  
-> 지금은 **웹·PWA**가 배포 형태입니다.
+> 로컬 `http://` 미리보기는 임시용입니다. 홈 화면 추가는 **HTTPS**(`app-garim.pages.dev`)를 쓰세요.
 
 ## 터미널로 실행
 

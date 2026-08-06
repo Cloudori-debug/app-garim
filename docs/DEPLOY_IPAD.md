@@ -3,6 +3,9 @@
 암기노트 **웹·PWA** 배포 안내입니다. (스토어 네이티브는 `docs/STORE_RELEASE.md`)  
 웹으로 아이패드에서 쓰려면 **항상 같은 `https://…` 주소**가 필요합니다.
 
+**고정 주소:** https://app-garim.pages.dev
+
+
 ## 가장 쉬운 방법: Cloudflare Pages
 
 ### 1회 준비
@@ -32,6 +35,9 @@ https://app-garim.pages.dev
 
 이 주소가 **고정**입니다. 아이패드 Safari에 북마크하거나 **홈 화면에 추가**하세요.  
 코드를 고친 뒤에도 `npm run deploy`만 다시 하면 같은 주소가 갱신됩니다.
+
+현재 운영 주소: **https://app-garim.pages.dev**
+
 
 ### Git으로 자동 배포 (선택)
 
@@ -66,7 +72,7 @@ npm run preview -- --host
 
 1. **Safari**로 `https://….pages.dev` 를 엽니다.
 2. **공유** → **홈 화면에 추가** → 추가
-3. 홈 화면 **암기노트** 아이콘으로 실행
+3. 홈 화면 **가림 암기노트** 아이콘으로 실행
 
 앱 **더보기**에도 같은 안내가 있습니다.
 

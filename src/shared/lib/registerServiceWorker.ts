@@ -5,7 +5,7 @@ export function registerServiceWorker(): void {
 
   window.addEventListener('load', () => {
     void navigator.serviceWorker.register('/sw.js').catch((err) => {
-      console.warn('[암기노트] 서비스 워커 등록 실패', err)
+      console.warn('[가림 암기노트] 서비스 워커 등록 실패', err)
     })
   })
 }
