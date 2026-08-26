@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   Bookmark,
@@ -6,6 +7,7 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
+  PanelLeft,
   RectangleHorizontal,
   Star,
   Trash2,
@@ -21,6 +23,8 @@ import type { MarkColor } from '@/entities/mark/types'
 import { clampFitScale } from '@/features/reader/fitScale'
 import { PdfViewer } from '@/features/reader/PdfViewer'
 import { PageThumbnailRail } from '@/features/reader/PageThumbnailRail'
+import { isHeavyPdf } from '@/features/reader/pdfBudget'
+import { revokeThumbs, setThumbConcurrency } from '@/features/reader/pageThumbCache'
 import type { ReaderMode } from '@/features/reader/types'
 import { useMarks } from '@/features/reader/useMarks'
 import {
@@ -63,7 +67,9 @@ export function ReaderPage() {
   const [pageBookmarked, setPageBookmarked] = useState(false)
   const [favoritePages, setFavoritePages] = useState<number[]>([])
   const [fitReady, setFitReady] = useState(false)
-  const [showThumbRail, setShowThumbRail] = useState(false)
+  const [railOpen, setRailOpen] = useState(false)
+  const [pdfJsDoc, setPdfJsDoc] = useState<PDFDocumentProxy | null>(null)
+  const [fileBytes, setFileBytes] = useState(0)
   const viewerPaneRef = useRef<HTMLDivElement>(null)
   // PDF DOM이 마운트된 뒤에만 리스너 부착 (로딩 중 early return 버그 방지)
   usePinchZoom(viewerPaneRef, zoomPercent, setZoomPercent, Boolean(doc && fileUrl))
@@ -125,6 +131,7 @@ export function ReaderPage() {
       revoked = url
       setDoc({ ...document, hiddenPages: document.hiddenPages ?? [] })
       setFileUrl(url)
+      setFileBytes(blobRow.size)
       const initialPage = Number(searchParams.get('page')) || document.lastPage || 1
       const p = Math.max(1, initialPage)
       setPage(p)
@@ -180,15 +187,33 @@ export function ReaderPage() {
   useEffect(() => {
     setFitReady(false)
     setZoomPercent(100)
-    setShowThumbRail(false)
   }, [documentId, fileUrl, pageLayout])
 
-  /** 첫 페이지가 뜬 뒤 책장 로드 — 초기 열기 속도 우선 */
+  useEffect(() => {
+    setRailOpen(false)
+    setPdfJsDoc(null)
+  }, [documentId, fileUrl])
+
+  const heavyPdf = isHeavyPdf(fileBytes, pageCount)
+
+  /** 가벼운 PDF만 책장을 자동으로 연다. 대용량은 본문만 먼저 그린다. */
   useEffect(() => {
     if (!fileUrl || !doc) return
-    const t = window.setTimeout(() => setShowThumbRail(true), 450)
+    if (heavyPdf) return
+    const t = window.setTimeout(() => setRailOpen(true), 450)
     return () => window.clearTimeout(t)
-  }, [fileUrl, doc])
+  }, [fileUrl, doc, heavyPdf])
+
+  useEffect(() => {
+    setThumbConcurrency(heavyPdf ? 1 : 2)
+  }, [heavyPdf])
+
+  useEffect(() => {
+    if (!fileUrl) return
+    return () => {
+      revokeThumbs(fileUrl)
+    }
+  }, [fileUrl])
 
   const applyFitFromBaseSize = (size: { width: number; height: number }) => {
     const el = viewerPaneRef.current
@@ -449,6 +474,16 @@ export function ReaderPage() {
         )}
 
         <div className="ml-auto flex items-center gap-1">
+          <Button
+            size="sm"
+            variant={railOpen ? 'secondary' : 'ghost'}
+            className="hidden sm:inline-flex"
+            title={railOpen ? '책장 닫기' : '페이지 미리보기 책장'}
+            onClick={() => setRailOpen((open) => !open)}
+          >
+            <PanelLeft className="h-4 w-4" />
+            책장
+          </Button>
           <Button size="icon" variant="ghost" disabled={!canPrev} onClick={() => goAdjacent(-1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -539,8 +574,9 @@ export function ReaderPage() {
       </div>
 
       <div className="flex min-h-0 flex-1">
-        {showThumbRail ? (
+        {railOpen && pdfJsDoc && fileUrl ? (
           <PageThumbnailRail
+            pdf={pdfJsDoc}
             fileUrl={fileUrl}
             pages={railPages}
             pageCount={pageCount}
@@ -552,15 +588,10 @@ export function ReaderPage() {
             onSelectPage={goToPage}
             onToggleHidden={(p) => void togglePageHidden(p)}
           />
-        ) : (
-          <aside
-            className="hidden w-[92px] shrink-0 border-r border-[var(--border)] bg-[var(--surface)] sm:block"
-            aria-hidden
-          />
-        )}
+        ) : null}
         <div
           ref={viewerPaneRef}
-          className="min-h-0 flex-1 overflow-auto bg-[var(--pdf-bg)] p-4 touch-pan-x touch-pan-y"
+          className="pdf-reader-scroll min-h-0 flex-1 bg-[var(--pdf-bg)] p-4"
         >
           {filterHidden && visiblePages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
@@ -572,7 +603,7 @@ export function ReaderPage() {
               </Button>
             </div>
           ) : (
-            <div className="mx-auto w-fit">
+            <div className="mx-auto w-full">
               <PdfViewer
                 fileUrl={fileUrl}
                 page={page}
@@ -581,8 +612,9 @@ export function ReaderPage() {
                 scale={scale}
                 zoomFactor={zoomPercent / 100}
                 mode={mode}
-                /* 짧은 PDF만 연속 스크롤 — 대용량은 단페이지로 즉시 표시 */
-                continuousScroll={pageCount > 0 && pageCount <= 40}
+                continuousScroll
+                renderRadius={heavyPdf ? 1 : 2}
+                scrollRootRef={viewerPaneRef}
                 marks={marksApi.marks}
                 selectedMarkId={selectedMarkId}
                 onSelectMark={setSelectedMarkId}
@@ -591,6 +623,8 @@ export function ReaderPage() {
                   setPageCount(n)
                   if (doc.pageCount !== n) void documentRepo.updatePageCount(doc.id, n)
                 }}
+                onPdfJsDocument={setPdfJsDoc}
+                devicePixelRatio={heavyPdf ? 1 : undefined}
                 onBasePageSize={(size) => {
                   if (!fitReady) applyFitFromBaseSize(size)
                 }}

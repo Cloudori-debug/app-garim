@@ -1,71 +1,86 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Document, Page } from 'react-pdf'
+import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { Bookmark, EyeOff } from 'lucide-react'
 
 import { cn } from '@/shared/lib/cn'
-import { PDFJS_DOC_OPTIONS } from '@/shared/lib/setupPdfWorker'
-import '@/shared/lib/setupPdfWorker'
-
-const THUMB_WIDTH = 72
-const THUMB_BODY_H = Math.round(THUMB_WIDTH * 1.35)
+import {
+  peekThumbUrl,
+  requestThumb,
+  THUMB_BODY_H,
+  THUMB_WIDTH,
+} from '@/features/reader/pageThumbCache'
 
 interface PageThumbnailRailProps {
+  pdf: PDFDocumentProxy
   fileUrl: string
-  /** 표시할 페이지(1-based). 없으면 1..pageCount */
   pages?: number[]
   pageCount: number
   currentPage: number
-  /** 페이지별 가림 개수 (선택) */
   markCounts?: Record<number, number>
-  /** 즐겨찾기된 페이지 번호 */
   favoritePages?: ReadonlySet<number> | number[]
-  /** 숨긴 페이지 (페이지 가림 모드에서 표시) */
   hiddenPages?: ReadonlySet<number> | number[]
-  /** 페이지 가림 모드: 숨김 토글 가능 */
   pageCoverMode?: boolean
   onSelectPage: (page: number) => void
   onToggleHidden?: (page: number) => void
 }
 
-function LazyThumbPage({
+function CachedThumb({
+  pdf,
+  fileUrl,
   pageNumber,
   root,
 }: {
+  pdf: PDFDocumentProxy
+  fileUrl: string
   pageNumber: number
   root: HTMLElement | null
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(false)
+  const [url, setUrl] = useState(() => peekThumbUrl(fileUrl, pageNumber))
+  const [inView, setInView] = useState(false)
+
+  useEffect(() => {
+    setUrl(peekThumbUrl(fileUrl, pageNumber))
+  }, [fileUrl, pageNumber])
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
     const io = new IntersectionObserver(
       ([entry]) => {
-        setVisible(Boolean(entry?.isIntersecting))
+        if (entry?.isIntersecting) setInView(true)
       },
-      { root, rootMargin: '120px 0px', threshold: 0.01 },
+      { root, rootMargin: '280px 0px', threshold: 0.01 },
     )
     io.observe(el)
     return () => io.disconnect()
   }, [root])
 
+  useEffect(() => {
+    if (!inView || url) return
+    let cancelled = false
+    void requestThumb(pdf, fileUrl, pageNumber)
+      .then((next) => {
+        if (!cancelled) setUrl(next)
+      })
+      .catch(() => {
+        /* 파싱 실패 시 번호만 유지 */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [inView, url, pdf, fileUrl, pageNumber])
+
   return (
     <div ref={ref} style={{ width: THUMB_WIDTH, height: THUMB_BODY_H }}>
-      {visible ? (
-        <Page
-          pageNumber={pageNumber}
+      {url ? (
+        <img
+          src={url}
+          alt=""
           width={THUMB_WIDTH}
-          renderTextLayer={false}
-          renderAnnotationLayer={false}
-          loading={
-            <div
-              className="flex items-center justify-center bg-[var(--bg)] text-[10px] text-[var(--muted)]"
-              style={{ width: THUMB_WIDTH, height: THUMB_BODY_H }}
-            >
-              …
-            </div>
-          }
+          height={THUMB_BODY_H}
+          draggable={false}
+          className="block h-full w-full bg-white object-contain"
         />
       ) : (
         <div
@@ -80,6 +95,7 @@ function LazyThumbPage({
 }
 
 export function PageThumbnailRail({
+  pdf,
   fileUrl,
   pages: pagesProp,
   pageCount,
@@ -94,7 +110,6 @@ export function PageThumbnailRail({
   const scrollRef = useRef<HTMLDivElement>(null)
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null)
   const thumbRefs = useRef(new Map<number, HTMLButtonElement>())
-  const file = useMemo(() => ({ url: fileUrl }), [fileUrl])
   const pages = useMemo(() => {
     if (pagesProp && pagesProp.length > 0) return pagesProp
     return Array.from({ length: Math.max(0, pageCount) }, (_, i) => i + 1)
@@ -111,6 +126,10 @@ export function PageThumbnailRail({
   useEffect(() => {
     setScrollRoot(scrollRef.current)
   }, [])
+
+  useEffect(() => {
+    void requestThumb(pdf, fileUrl, currentPage).catch(() => undefined)
+  }, [pdf, fileUrl, currentPage])
 
   useEffect(() => {
     const root = scrollRef.current
@@ -133,78 +152,76 @@ export function PageThumbnailRail({
         책장
       </div>
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-2">
-        <Document file={file} options={PDFJS_DOC_OPTIONS} loading={null} error={null}>
-          {pages.map((p) => {
-            const marksOnPage = markCounts?.[p] ?? 0
-            const favorited = favSet.has(p)
-            const hidden = hiddenSet.has(p)
-            const active = p === currentPage
-            return (
-              <div key={p} className="relative">
-                <button
-                  type="button"
-                  ref={(el) => {
-                    if (el) thumbRefs.current.set(p, el)
-                    else thumbRefs.current.delete(p)
-                  }}
-                  title={`${p}페이지${hidden ? ' · 숨김' : ''}${favorited ? ' · 즐겨찾기' : ''}${marksOnPage ? ` · 단어가림 ${marksOnPage}` : ''}`}
-                  onClick={() => onSelectPage(p)}
+        {pages.map((p) => {
+          const marksOnPage = markCounts?.[p] ?? 0
+          const favorited = favSet.has(p)
+          const hidden = hiddenSet.has(p)
+          const active = p === currentPage
+          return (
+            <div key={p} className="relative">
+              <button
+                type="button"
+                ref={(el) => {
+                  if (el) thumbRefs.current.set(p, el)
+                  else thumbRefs.current.delete(p)
+                }}
+                title={`${p}페이지${hidden ? ' · 숨김' : ''}${favorited ? ' · 즐겨찾기' : ''}${marksOnPage ? ` · 단어가림 ${marksOnPage}` : ''}`}
+                onClick={() => onSelectPage(p)}
+                className={cn(
+                  'relative block w-full overflow-hidden rounded-md border bg-[var(--surface)] transition-all',
+                  active
+                    ? 'border-[var(--accent)] ring-2 ring-[var(--accent)]/35'
+                    : favorited
+                      ? 'border-[var(--accent)]/50 opacity-90 hover:opacity-100'
+                      : 'border-[var(--border)] opacity-75 hover:opacity-100',
+                  hidden && 'opacity-40',
+                )}
+              >
+                <CachedThumb pdf={pdf} fileUrl={fileUrl} pageNumber={p} root={scrollRoot} />
+                <span
                   className={cn(
-                    'relative block w-full overflow-hidden rounded-md border bg-[var(--surface)] transition-all',
-                    active
-                      ? 'border-[var(--accent)] ring-2 ring-[var(--accent)]/35'
-                      : favorited
-                        ? 'border-[var(--accent)]/50 opacity-90 hover:opacity-100'
-                        : 'border-[var(--border)] opacity-75 hover:opacity-100',
-                    hidden && 'opacity-40',
+                    'block py-0.5 text-center text-[10px] font-semibold tabular-nums',
+                    active ? 'bg-[var(--accent)] text-white' : 'bg-[var(--bg)] text-[var(--muted)]',
                   )}
                 >
-                  <LazyThumbPage pageNumber={p} root={scrollRoot} />
+                  {p}
+                </span>
+                {favorited && (
                   <span
-                    className={cn(
-                      'block py-0.5 text-center text-[10px] font-semibold tabular-nums',
-                      active ? 'bg-[var(--accent)] text-white' : 'bg-[var(--bg)] text-[var(--muted)]',
-                    )}
+                    className="absolute top-1 left-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow"
+                    aria-hidden
                   >
-                    {p}
+                    <Bookmark className="h-2.5 w-2.5 fill-current" strokeWidth={2} />
                   </span>
-                  {favorited && (
-                    <span
-                      className="absolute top-1 left-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow"
-                      aria-hidden
-                    >
-                      <Bookmark className="h-2.5 w-2.5 fill-current" strokeWidth={2} />
-                    </span>
-                  )}
-                  {marksOnPage > 0 && (
-                    <span className="absolute top-1 right-1 rounded-full bg-[var(--ink)]/80 px-1 text-[9px] font-bold text-white">
-                      {marksOnPage}
-                    </span>
-                  )}
-                  {hidden && (
-                    <span className="absolute inset-0 flex items-center justify-center bg-neutral-900/25">
-                      <EyeOff className="h-5 w-5 text-white drop-shadow" />
-                    </span>
-                  )}
-                </button>
-                {pageCoverMode && onToggleHidden && (
-                  <button
-                    type="button"
-                    className={cn(
-                      'mt-1 w-full rounded px-1 py-0.5 text-[9px] font-semibold',
-                      hidden
-                        ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
-                        : 'bg-[var(--border)] text-[var(--muted)] hover:bg-[var(--border-strong)]',
-                    )}
-                    onClick={() => onToggleHidden(p)}
-                  >
-                    {hidden ? '보이기' : '숨기기'}
-                  </button>
                 )}
-              </div>
-            )
-          })}
-        </Document>
+                {marksOnPage > 0 && (
+                  <span className="absolute top-1 right-1 rounded-full bg-[var(--ink)]/80 px-1 text-[9px] font-bold text-white">
+                    {marksOnPage}
+                  </span>
+                )}
+                {hidden && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-neutral-900/25">
+                    <EyeOff className="h-5 w-5 text-white drop-shadow" />
+                  </span>
+                )}
+              </button>
+              {pageCoverMode && onToggleHidden && (
+                <button
+                  type="button"
+                  className={cn(
+                    'mt-1 w-full rounded px-1 py-0.5 text-[9px] font-semibold',
+                    hidden
+                      ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
+                      : 'bg-[var(--border)] text-[var(--muted)] hover:bg-[var(--border-strong)]',
+                  )}
+                  onClick={() => onToggleHidden(p)}
+                >
+                  {hidden ? '보이기' : '숨기기'}
+                </button>
+              )}
+            </div>
+          )
+        })}
       </div>
     </aside>
   )

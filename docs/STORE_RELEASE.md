@@ -54,6 +54,9 @@ Android 로컬 빌드:
 - [x] 아이콘·스플래시 (`assets/logo.svg` + `npm run cap:assets`)
 - [x] 개인정보처리방침 URL (`/privacy.html`)
 - [x] Capacitor Android/iOS 프로젝트 + `codemagic.yaml`
+- [x] 샘플 PDF로 심사·첫 실행 가능 (오늘 탭)
+- [x] 네이티브: 서비스 워커 끔 · PWA 안내 숨김 · 백업 공유 시트
 - [ ] Apple / Google 개발자 계정 (수동)
 - [ ] 실기기에서 PDF·가림·복습 스모크 테스트
 - [ ] (iOS) Codemagic 빌드 1회 성공 → TestFlight
+- [ ] (Android) `bundleRelease` AAB → Play 내부 테스트

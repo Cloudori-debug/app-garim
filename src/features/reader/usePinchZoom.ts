@@ -11,10 +11,8 @@ function dist2(
 
 /**
  * PDF 스크롤 영역에서만 핀치 / Ctrl+휠로 확대.
- * 브라우저(앱 전체) 줌은 막고, zoomPercent(PDF 페이지만)만 변경.
- *
- * @param enabled PDF 뷰어 DOM이 실제로 마운트된 뒤에 true로 둘 것
- *   (로딩 화면일 때 effect가 한 번만 돌면 리스너가 영구히 안 붙는 버그 방지)
+ * 한 손가락 스크롤은 네이티브에 맡긴다.
+ * (스크롤 컨테이너에 상시 non-passive touchmove를 붙이면 iOS에서 팬이 막힘)
  */
 export function usePinchZoom(
   targetRef: RefObject<HTMLElement | null>,
@@ -35,6 +33,7 @@ export function usePinchZoom(
     let startDist = 0
     let startZoom = 100
     let gestureStartZoom = 100
+    let pinchMoveBound = false
 
     const syncPinchFromPointers = () => {
       if (pointers.size < 2) return
@@ -46,6 +45,38 @@ export function usePinchZoom(
       setZoomPercent(clampZoomPercent(startZoom * (d / startDist)))
     }
 
+    const onPinchPointerMove = (e: PointerEvent) => {
+      if (!pointers.has(e.pointerId)) return
+      pointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY })
+      if (!pinching || pointers.size < 2) return
+      e.preventDefault()
+      syncPinchFromPointers()
+    }
+
+    const onPinchTouchMove = (e: TouchEvent) => {
+      if (!pinching || e.touches.length !== 2) return
+      e.preventDefault()
+      const d = dist2(e.touches[0]!, e.touches[1]!)
+      if (startDist < 4) return
+      setZoomPercent(clampZoomPercent(startZoom * (d / startDist)))
+    }
+
+    const bindPinchMove = () => {
+      if (pinchMoveBound) return
+      pinchMoveBound = true
+      el.style.touchAction = 'none'
+      el.addEventListener('pointermove', onPinchPointerMove, { capture: true, passive: false })
+      el.addEventListener('touchmove', onPinchTouchMove, { capture: true, passive: false })
+    }
+
+    const unbindPinchMove = () => {
+      if (!pinchMoveBound) return
+      pinchMoveBound = false
+      el.style.touchAction = ''
+      el.removeEventListener('pointermove', onPinchPointerMove, { capture: true })
+      el.removeEventListener('touchmove', onPinchTouchMove, { capture: true })
+    }
+
     const onPointerDown = (e: PointerEvent) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return
       pointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY })
@@ -54,28 +85,19 @@ export function usePinchZoom(
         const [a, b] = [...pointers.values()]
         startDist = a && b ? dist2(a, b) : 0
         startZoom = zoomRef.current
-        el.style.touchAction = 'none'
+        bindPinchMove()
       }
-    }
-
-    const onPointerMove = (e: PointerEvent) => {
-      if (!pointers.has(e.pointerId)) return
-      pointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY })
-      if (!pinching || pointers.size < 2) return
-      e.preventDefault()
-      syncPinchFromPointers()
     }
 
     const endPointer = (e: PointerEvent) => {
       pointers.delete(e.pointerId)
       if (pointers.size < 2 && pinching) {
         pinching = false
-        el.style.touchAction = ''
+        unbindPinchMove()
         setZoomPercent(snapZoomPercent(zoomRef.current))
       }
     }
 
-    // Safari(구형 포함): gesture* — 트랙패드·일부 터치
     const onGestureStart = (e: Event) => {
       e.preventDefault()
       gestureStartZoom = zoomRef.current
@@ -91,6 +113,7 @@ export function usePinchZoom(
     const onGestureEnd = (e: Event) => {
       e.preventDefault()
       pinching = false
+      unbindPinchMove()
       setZoomPercent(snapZoomPercent(zoomRef.current))
     }
 
@@ -107,66 +130,54 @@ export function usePinchZoom(
       setZoomPercent(clampZoomPercent(zoomRef.current * step))
     }
 
-    // Touch fallback (포인터 이벤트가 약한 환경)
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 2) return
       pinching = true
       startDist = dist2(e.touches[0]!, e.touches[1]!)
       startZoom = zoomRef.current
-      el.style.touchAction = 'none'
-      e.preventDefault()
-    }
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!pinching || e.touches.length !== 2) return
-      e.preventDefault()
-      const d = dist2(e.touches[0]!, e.touches[1]!)
-      if (startDist < 4) return
-      setZoomPercent(clampZoomPercent(startZoom * (d / startDist)))
+      bindPinchMove()
     }
 
     const onTouchEnd = (e: TouchEvent) => {
       if (e.touches.length >= 2) return
       if (!pinching) return
       pinching = false
-      el.style.touchAction = ''
+      unbindPinchMove()
       setZoomPercent(snapZoomPercent(zoomRef.current))
     }
 
-    const opts: AddEventListenerOptions = { capture: true, passive: false }
+    const captureFalse: AddEventListenerOptions = { capture: true, passive: false }
+    const captureOk: AddEventListenerOptions = { capture: true }
 
     el.addEventListener('pointerdown', onPointerDown)
-    el.addEventListener('pointermove', onPointerMove, opts)
     el.addEventListener('pointerup', endPointer)
     el.addEventListener('pointercancel', endPointer)
     el.addEventListener('lostpointercapture', endPointer)
 
-    el.addEventListener('touchstart', onTouchStart, opts)
-    el.addEventListener('touchmove', onTouchMove, opts)
+    // touchstart는 passive 유지 — 상시 non-passive면 iOS 세로 스크롤이 막힘
+    el.addEventListener('touchstart', onTouchStart, { capture: true, passive: true })
     el.addEventListener('touchend', onTouchEnd)
     el.addEventListener('touchcancel', onTouchEnd)
 
-    el.addEventListener('gesturestart', onGestureStart, opts)
-    el.addEventListener('gesturechange', onGestureChange, opts)
-    el.addEventListener('gestureend', onGestureEnd, opts)
+    el.addEventListener('gesturestart', onGestureStart, captureFalse)
+    el.addEventListener('gesturechange', onGestureChange, captureFalse)
+    el.addEventListener('gestureend', onGestureEnd, captureFalse)
 
-    window.addEventListener('wheel', onWheel, opts)
+    window.addEventListener('wheel', onWheel, captureFalse)
 
     return () => {
-      el.style.touchAction = ''
+      unbindPinchMove()
       el.removeEventListener('pointerdown', onPointerDown)
-      el.removeEventListener('pointermove', onPointerMove, opts)
       el.removeEventListener('pointerup', endPointer)
       el.removeEventListener('pointercancel', endPointer)
       el.removeEventListener('lostpointercapture', endPointer)
-      el.removeEventListener('touchstart', onTouchStart, opts)
-      el.removeEventListener('touchmove', onTouchMove, opts)
+      el.removeEventListener('touchstart', onTouchStart, captureOk)
       el.removeEventListener('touchend', onTouchEnd)
       el.removeEventListener('touchcancel', onTouchEnd)
-      el.removeEventListener('gesturestart', onGestureStart, opts)
-      el.removeEventListener('gesturechange', onGestureChange, opts)
-      el.removeEventListener('gestureend', onGestureEnd, opts)
-      window.removeEventListener('wheel', onWheel, opts)
+      el.removeEventListener('gesturestart', onGestureStart, captureOk)
+      el.removeEventListener('gesturechange', onGestureChange, captureOk)
+      el.removeEventListener('gestureend', onGestureEnd, captureOk)
+      window.removeEventListener('wheel', onWheel, captureOk)
     }
   }, [targetRef, setZoomPercent, enabled])
 }

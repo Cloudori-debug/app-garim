@@ -4,6 +4,8 @@ import { ChevronRight } from 'lucide-react'
 
 import { useTheme } from '@/app/ThemeProvider'
 import * as backupRepo from '@/entities/backup/repository'
+import { APP_VERSION, PRIVACY_URL } from '@/shared/lib/appMeta'
+import { isNativeApp } from '@/shared/lib/platform'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/lib/cn'
 
@@ -175,30 +177,50 @@ export function MorePage() {
           </div>
         </section>
 
+        {!isNativeApp() && (
+          <section>
+            <h2 className="text-xs font-medium text-[var(--muted)]">홈 화면에 추가</h2>
+            <div className={cn(cardClass, 'mt-2 px-4 py-3')}>
+              <p className="text-sm text-[var(--ink)]">
+                Safari로{' '}
+                <a
+                  href="https://app-garim.pages.dev"
+                  className="font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
+                >
+                  app-garim.pages.dev
+                </a>
+                를 연 뒤:
+              </p>
+              <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[var(--muted)]">
+                <li>
+                  <span className="text-[var(--ink)]">공유</span> 버튼
+                </li>
+                <li>
+                  <span className="text-[var(--ink)]">홈 화면에 추가</span>
+                </li>
+              </ol>
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                홈 화면 아이콘으로 전체 화면처럼 실행됩니다. PDF·가림은 이 기기에만 저장됩니다.
+              </p>
+            </div>
+          </section>
+        )}
+
         <section>
-          <h2 className="text-xs font-medium text-[var(--muted)]">홈 화면에 추가</h2>
+          <h2 className="text-xs font-medium text-[var(--muted)]">앱 정보</h2>
           <div className={cn(cardClass, 'mt-2 px-4 py-3')}>
             <p className="text-sm text-[var(--ink)]">
-              Safari로{' '}
-              <a
-                href="https://app-garim.pages.dev"
-                className="font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
-              >
-                app-garim.pages.dev
-              </a>
-              를 연 뒤:
+              가림 암기노트 {APP_VERSION}
+              {isNativeApp() ? ' · 스토어 앱' : ''}
             </p>
-            <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[var(--muted)]">
-              <li>
-                <span className="text-[var(--ink)]">공유</span> 버튼
-              </li>
-              <li>
-                <span className="text-[var(--ink)]">홈 화면에 추가</span>
-              </li>
-            </ol>
-            <p className="mt-2 text-xs text-[var(--muted)]">
-              홈 화면 아이콘으로 전체 화면처럼 실행됩니다. PDF·가림은 이 기기에만 저장됩니다.
-            </p>
+            <a
+              href={PRIVACY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-sm font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
+            >
+              개인정보처리방침
+            </a>
           </div>
         </section>
       </div>

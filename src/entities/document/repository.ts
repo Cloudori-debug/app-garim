@@ -2,6 +2,10 @@ import { db } from '@/entities/db'
 import type { Document, HiddenPageItem, PageLayout, PdfBlob } from '@/entities/document/types'
 import { createId, nowIso } from '@/shared/lib/id'
 
+export async function countDocuments(): Promise<number> {
+  return db.documents.count()
+}
+
 export async function listDocumentsByFolder(folderId: string): Promise<Document[]> {
   const docs = await db.documents.where('folderId').equals(folderId).toArray()
   return docs.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))

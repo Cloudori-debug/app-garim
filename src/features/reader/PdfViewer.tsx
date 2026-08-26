@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { Document as PdfDocument, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 
@@ -9,7 +10,7 @@ import '@/shared/lib/setupPdfWorker'
 import { PDFJS_DOC_OPTIONS } from '@/shared/lib/setupPdfWorker'
 
 /** 연속 스크롤에서 실제로 캔버스를 그릴 페이지 반경(현재 ±N) */
-const RENDER_RADIUS = 2
+const DEFAULT_RENDER_RADIUS = 2
 const DEFAULT_PAGE_HEIGHT = 900
 const PAGE_GAP = 16
 
@@ -26,6 +27,10 @@ interface PdfViewerProps {
   mode: ReaderMode
   /** true면 페이지를 세로로 이어 스크롤 */
   continuousScroll?: boolean
+  /** 연속 스크롤 시 현재 페이지 앞뒤로 그릴 장 수. 대용량은 1 권장 */
+  renderRadius?: number
+  /** 실제 overflow 스크롤 컨테이너 (Reader 본문 패인) */
+  scrollRootRef?: RefObject<HTMLElement | null>
   marks: Mark[]
   selectedMarkId: string | null
   onSelectMark: (id: string | null) => void
@@ -33,6 +38,10 @@ interface PdfViewerProps {
   onPageCount: (n: number) => void
   /** 1페이지 원본(scale=1) 크기 — fit 배율 계산용. 별도 getDocument 없이 사용 */
   onBasePageSize?: (size: { width: number; height: number }) => void
+  /** 본문이 연 pdf.js 문서. 책장이 두 번째 Document를 열지 않도록 공유 */
+  onPdfJsDocument?: (doc: PDFDocumentProxy | null) => void
+  /** 레티나 캔버스 상한. 대용량 스캔본은 1 */
+  devicePixelRatio?: number
   onCreateMark: (page: number, rect: { x: number; y: number; w: number; h: number }) => void
   onUpdateGeometry: (id: string, rect: { x: number; y: number; w: number; h: number }) => void
   onDeleteMark: (id: string) => void
@@ -53,8 +62,8 @@ function PageBlock({
   onDeleteMark,
   onToggleStudy,
   onToggleFavorite,
-  pageRef,
   onMeasured,
+  devicePixelRatio,
 }: {
   pageNumber: number
   scale: number
@@ -68,8 +77,8 @@ function PageBlock({
   onDeleteMark: (id: string) => void
   onToggleStudy: (id: string) => void
   onToggleFavorite: (id: string, isFavorite: boolean) => void
-  pageRef?: (el: HTMLDivElement | null) => void
   onMeasured?: (pageNumber: number, width: number, height: number) => void
+  devicePixelRatio?: number
 }) {
   const [pageSize, setPageSize] = useState({ width: 0, height: 0 })
   const z = zoomFactor > 0 ? zoomFactor : 1
@@ -81,7 +90,6 @@ function PageBlock({
 
   return (
     <div
-      ref={pageRef}
       data-page={pageNumber}
       className="relative mx-auto shadow-md"
       style={
@@ -106,6 +114,7 @@ function PageBlock({
           <Page
             pageNumber={pageNumber}
             scale={scale}
+            {...(devicePixelRatio != null ? { devicePixelRatio } : {})}
             renderTextLayer={false}
             renderAnnotationLayer={false}
             loading={
@@ -116,7 +125,7 @@ function PageBlock({
             onRenderSuccess={(pageProxy) => {
               const viewport = pageProxy.getViewport({ scale })
               setPageSize({ width: viewport.width, height: viewport.height })
-              onMeasured?.(pageNumber, viewport.width * z, viewport.height * z)
+              onMeasured?.(pageNumber, viewport.width, viewport.height)
             }}
           />
           {sized && (
@@ -150,6 +159,8 @@ export function PdfViewer({
   zoomFactor = 1,
   mode,
   continuousScroll = false,
+  renderRadius = DEFAULT_RENDER_RADIUS,
+  scrollRootRef,
   marks,
   selectedMarkId,
   onSelectMark,
@@ -161,18 +172,34 @@ export function PdfViewer({
   onDeleteMark,
   onToggleStudy,
   onToggleFavorite,
+  onPdfJsDocument,
+  devicePixelRatio,
 }: PdfViewerProps) {
   const file = useMemo(() => ({ url: fileUrl }), [fileUrl])
-  const pageEls = useRef(new Map<number, HTMLDivElement>())
-  const skipObserver = useRef(false)
-  const heightsRef = useRef(new Map<number, number>())
   const [docPages, setDocPages] = useState(pageCount)
   const [estHeight, setEstHeight] = useState(DEFAULT_PAGE_HEIGHT)
+  const onPdfJsDocumentRef = useRef(onPdfJsDocument)
+  onPdfJsDocumentRef.current = onPdfJsDocument
+  const onPageChangeRef = useRef(onPageChange)
+  onPageChangeRef.current = onPageChange
+  const lastEmittedPage = useRef(page)
+  const strideRef = useRef(DEFAULT_PAGE_HEIGHT + PAGE_GAP)
+  const radius = Math.max(1, renderRadius)
+  const z = zoomFactor > 0 ? zoomFactor : 1
+  const displayHeight = estHeight * z
+  const stride = displayHeight + PAGE_GAP
 
   const reportedBase = useRef(false)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     reportedBase.current = false
+    lastEmittedPage.current = Number.NaN
+  }, [fileUrl])
+
+  useEffect(() => {
+    return () => {
+      onPdfJsDocumentRef.current?.(null)
+    }
   }, [fileUrl])
 
   useEffect(() => {
@@ -190,153 +217,114 @@ export function PdfViewer({
     return idx >= 0 ? idx : 0
   }, [pages, page])
 
+  /** 도구바·책장에서 페이지가 바뀐 경우에만 스크롤 이동. 손스크롤은 건드리지 않음 */
   useLayoutEffect(() => {
     if (!continuousScroll) return
-    const el = pageEls.current.get(page)
-    if (!el) return
-    skipObserver.current = true
-    el.scrollIntoView({ block: 'start', behavior: 'instant' in window ? 'instant' : 'auto' })
-    const t = window.setTimeout(() => {
-      skipObserver.current = false
-    }, 120)
-    return () => window.clearTimeout(t)
-  }, [page, continuousScroll, pages, activeIndex])
+    const root = scrollRootRef?.current
+    if (!root) return
+    const idx = Math.max(0, pages.indexOf(page))
+    const prevStride = strideRef.current
+    strideRef.current = stride
 
-  /** spacer 가상화: 스크롤 위치로 현재 페이지 추정 */
+    if (page !== lastEmittedPage.current) {
+      lastEmittedPage.current = page
+      root.scrollTop = idx * stride
+      return
+    }
+    if (prevStride !== stride && prevStride > 0) {
+      root.scrollTop = root.scrollTop * (stride / prevStride)
+    }
+  }, [page, continuousScroll, pages, stride, scrollRootRef, fileUrl])
+
   useEffect(() => {
     if (!continuousScroll || !onPageChange) return
-    const probe = pageEls.current.get(page)
-    const root = probe?.closest('.overflow-auto') as HTMLElement | null
+    const root = scrollRootRef?.current
     if (!root) return
 
     const onScroll = () => {
-      if (skipObserver.current) return
-      const stride = estHeight + PAGE_GAP
-      if (stride <= 0) return
+      const step = strideRef.current
+      if (step <= 0) return
       const idx = Math.min(
         pages.length - 1,
-        Math.max(0, Math.round((root.scrollTop + 8) / stride)),
+        Math.max(0, Math.round((root.scrollTop + 8) / step)),
       )
       const next = pages[idx]
-      if (next && next !== page) onPageChange(next)
+      if (next && next !== lastEmittedPage.current) {
+        lastEmittedPage.current = next
+        onPageChangeRef.current?.(next)
+      }
     }
 
     root.addEventListener('scroll', onScroll, { passive: true })
     return () => root.removeEventListener('scroll', onScroll)
-  }, [continuousScroll, onPageChange, page, pages, estHeight, activeIndex])
+  }, [continuousScroll, onPageChange, pages, scrollRootRef])
 
-  useEffect(() => {
-    if (!continuousScroll || !onPageChange) return
-    const nodes = [...pageEls.current.values()]
-    if (nodes.length === 0) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (skipObserver.current) return
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .map((e) => ({
-            page: Number((e.target as HTMLElement).dataset.page),
-            ratio: e.intersectionRatio,
-          }))
-          .filter((v) => v.page > 0)
-        if (visible.length === 0) return
-        visible.sort((a, b) => b.ratio - a.ratio)
-        const next = visible[0]?.page
-        if (next && next !== page) onPageChange(next)
-      },
-      { root: null, threshold: [0.15, 0.35, 0.55] },
-    )
-
-    nodes.forEach((n) => observer.observe(n))
-    return () => observer.disconnect()
-  }, [continuousScroll, onPageChange, page, pages, fileUrl, zoomFactor, activeIndex, estHeight])
-
-  const setPageRef = (pageNumber: number) => (el: HTMLDivElement | null) => {
-    if (el) pageEls.current.set(pageNumber, el)
-    else pageEls.current.delete(pageNumber)
-  }
-
-  const onMeasured = (pageNumber: number, width: number, height: number) => {
-    heightsRef.current.set(pageNumber, height)
+  const onMeasured = (_pageNumber: number, _width: number, height: number) => {
     if (height > 0 && (estHeight === DEFAULT_PAGE_HEIGHT || Math.abs(height - estHeight) > 40)) {
       setEstHeight(height)
     }
-    void width
+  }
+
+  const start = Math.max(0, activeIndex - radius)
+  const end = Math.min(pages.length, activeIndex + radius + 1)
+  const slice = pages.slice(start, end)
+  const stackHeight = Math.max(1, pages.length) * stride
+
+  const sharedPageProps = {
+    scale,
+    zoomFactor: z,
+    mode,
+    marks,
+    selectedMarkId,
+    onSelectMark,
+    onCreateMark,
+    onUpdateGeometry,
+    onDeleteMark,
+    onToggleStudy,
+    onToggleFavorite,
+    onMeasured,
+    devicePixelRatio,
   }
 
   return (
     <PdfDocument
       file={file}
+      className="block w-full"
       options={PDFJS_DOC_OPTIONS}
       loading={<div className="p-8 text-sm text-neutral-500">PDF 로딩…</div>}
       error={<div className="p-8 text-sm text-red-600">PDF를 열 수 없습니다.</div>}
       onLoadSuccess={(doc) => {
         setDocPages(doc.numPages)
         onPageCount(doc.numPages)
+        onPdfJsDocumentRef.current?.(doc)
         if (!reportedBase.current && onBasePageSize) {
           reportedBase.current = true
           void doc.getPage(1).then((p) => {
             const viewport = p.getViewport({ scale: 1 })
             onBasePageSize({ width: viewport.width, height: viewport.height })
+            const fitted = viewport.height * scale
+            if (fitted > 0) setEstHeight(fitted)
           })
         }
       }}
     >
       {continuousScroll ? (
-        <div className="flex flex-col items-center pb-8">
-          {(() => {
-            const start = Math.max(0, activeIndex - RENDER_RADIUS)
-            const end = Math.min(pages.length, activeIndex + RENDER_RADIUS + 1)
-            const topH = start * (estHeight + PAGE_GAP)
-            const bottomCount = Math.max(0, pages.length - end)
-            const bottomH = bottomCount * (estHeight + PAGE_GAP)
-            const slice = pages.slice(start, end)
+        <div className="relative mx-auto w-full" style={{ height: stackHeight }}>
+          {slice.map((pageNumber) => {
+            const index = pages.indexOf(pageNumber)
             return (
-              <>
-                {topH > 0 && <div style={{ height: topH }} aria-hidden />}
-                <div className="flex w-full flex-col items-center gap-4">
-                  {slice.map((pageNumber) => (
-                    <PageBlock
-                      key={pageNumber}
-                      pageNumber={pageNumber}
-                      scale={scale}
-                      zoomFactor={zoomFactor}
-                      mode={mode}
-                      marks={marks}
-                      selectedMarkId={selectedMarkId}
-                      onSelectMark={onSelectMark}
-                      onCreateMark={onCreateMark}
-                      onUpdateGeometry={onUpdateGeometry}
-                      onDeleteMark={onDeleteMark}
-                      onToggleStudy={onToggleStudy}
-                      onToggleFavorite={onToggleFavorite}
-                      pageRef={setPageRef(pageNumber)}
-                      onMeasured={onMeasured}
-                    />
-                  ))}
-                </div>
-                {bottomH > 0 && <div style={{ height: bottomH }} aria-hidden />}
-              </>
+              <div
+                key={pageNumber}
+                className="absolute left-1/2 -translate-x-1/2"
+                style={{ top: index * stride }}
+              >
+                <PageBlock pageNumber={pageNumber} {...sharedPageProps} />
+              </div>
             )
-          })()}
+          })}
         </div>
       ) : (
-        <PageBlock
-          pageNumber={page}
-          scale={scale}
-          zoomFactor={zoomFactor}
-          mode={mode}
-          marks={marks}
-          selectedMarkId={selectedMarkId}
-          onSelectMark={onSelectMark}
-          onCreateMark={onCreateMark}
-          onUpdateGeometry={onUpdateGeometry}
-          onDeleteMark={onDeleteMark}
-          onToggleStudy={onToggleStudy}
-          onToggleFavorite={onToggleFavorite}
-          onMeasured={onMeasured}
-        />
+        <PageBlock pageNumber={page} {...sharedPageProps} />
       )}
     </PdfDocument>
   )

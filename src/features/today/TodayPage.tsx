@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 
 import { useReviewQueue, type DocCount, type SubjectGroup } from '@/features/today/useReviewQueue'
+import { SampleStartButton } from '@/features/onboarding/SampleStartButton'
 import { cn } from '@/shared/lib/cn'
 
 type Mode = 'subject' | null
@@ -146,9 +147,12 @@ export function TodayPage() {
         )}
 
         {!loading && dueCount === 0 && practiceCount === 0 && (
-          <p className="mt-10 text-center text-sm text-[var(--muted)]">
-            서재에서 가림을 만들면 여기에 모여요.
-          </p>
+          <div className="mt-10 flex flex-col items-center gap-4">
+            <p className="text-center text-sm text-[var(--muted)]">
+              서재에서 가림을 만들면 여기에 모여요.
+            </p>
+            <SampleStartButton onSeeded={() => navigate('/review')} />
+          </div>
         )}
       </main>
     </div>

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 
 import { useFavorites } from '@/features/favorites/useFavorites'
+import { SampleStartButton } from '@/features/onboarding/SampleStartButton'
 import {
   isAbortError,
   prepareLandscapeSplitPreview,
@@ -25,6 +26,7 @@ import {
 } from '@/features/library/splitDualPagePdf'
 import { useDocuments } from '@/features/library/useDocuments'
 import { useFolders } from '@/features/library/useFolders'
+import * as documentRepo from '@/entities/document/repository'
 import type { Document } from '@/entities/document/types'
 import type { PageLayout } from '@/entities/document/types'
 import type { Folder } from '@/entities/folder/types'
@@ -100,6 +102,7 @@ export function LibraryPage() {
   const [landscapePreparing, setLandscapePreparing] = useState(false)
   const [landscapeProgress, setLandscapeProgress] = useState<SplitProgress | null>(null)
   const [landscapeError, setLandscapeError] = useState<string | null>(null)
+  const [libraryIsEmpty, setLibraryIsEmpty] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const landscapeFileRef = useRef<HTMLInputElement>(null)
   const createInputRef = useRef<HTMLInputElement>(null)
@@ -110,7 +113,14 @@ export function LibraryPage() {
   const landscapeBusy = landscapePreparing || landscapeProgress !== null
 
   const { folders, error, create, commitDraft, refresh } = useFolders()
-  const { documents, addPdf, remove: removeDoc, toggleFavorite, move } = useDocuments(selectedFolderId)
+  const {
+    documents,
+    addPdf,
+    remove: removeDoc,
+    toggleFavorite,
+    move,
+    refresh: refreshDocs,
+  } = useDocuments(selectedFolderId)
   const favorites = useFavorites()
 
   const pendingDeleteSet = useMemo(() => new Set(pendingDeleteIds), [pendingDeleteIds])
@@ -143,6 +153,10 @@ export function LibraryPage() {
     const root = folders.find((f) => f.parentId === null) ?? folders[0]
     if (root) setSelectedFolderId(root.id)
   }, [folders, selectedFolderId])
+
+  useEffect(() => {
+    void documentRepo.countDocuments().then((n) => setLibraryIsEmpty(n === 0))
+  }, [documents])
 
   const leaveEditModeClean = () => {
     setEditMode(false)
@@ -610,7 +624,18 @@ export function LibraryPage() {
                 <li className="py-10 text-center text-sm text-[var(--muted)]">폴더를 선택하세요</li>
               )}
               {selectedFolderId && documents.length === 0 && (
-                <li className="py-10 text-center text-sm text-[var(--muted)]">PDF를 추가하세요</li>
+                <li className="flex flex-col items-center gap-4 py-10 text-center">
+                  <p className="text-sm text-[var(--muted)]">PDF를 추가하세요</p>
+                  {libraryIsEmpty && (
+                    <SampleStartButton
+                      onSeeded={() => {
+                        void refresh()
+                        void refreshDocs()
+                        void favorites.refresh()
+                      }}
+                    />
+                  )}
+                </li>
               )}
               {documents.map((doc) => (
                 <DocumentRow

@@ -5,7 +5,11 @@
     <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>en</string>
+	<string>ko</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ko</string>
+	</array>
 	<key>CFBundleDisplayName</key>
         <string>가림 암기노트</string>
 	<key>CFBundleExecutable</key>
@@ -49,5 +53,7 @@
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>학습용 PDF를 서재에 가져올 때 파일에 접근합니다.</string>
 </dict>
 </plist>

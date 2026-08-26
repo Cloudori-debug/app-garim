@@ -75,6 +75,20 @@ cd android
    - **Git에 올리지 말 것**  
    - 비밀번호 관리자에 백업 (분실 시 업데이트 불가)
 
+### Play 데이터 안전(Data safety) 답변
+
+앱은 계정이 없고 서버로 사용자 데이터를 보내지 않습니다.
+
+| 항목 | 값 |
+|------|-----|
+| 수집하는 데이터 | 없음 |
+| 공유하는 데이터 | 없음 |
+| 암호화 전송 | 해당 없음 (서버 전송 없음) |
+| 계정 삭제 | 해당 없음. 앱 삭제 시 기기 데이터 삭제 |
+| 개인정보처리방침 | https://app-garim.pages.dev/privacy.html |
+
+스토어 설명·키워드는 `docs/APP_STORE_LAUNCH.md`와 동일하게 쓰면 됩니다.
+
 ### (선택) Codemagic → Play
 
 1. Play Console 서비스 계정 JSON 생성 후 Codemagic에 업로드  

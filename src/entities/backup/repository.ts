@@ -90,6 +90,19 @@ export async function downloadBackupFile(): Promise<{ fileName: string; byteSize
   const blob = new Blob([json], { type: 'application/json' })
   const stamp = new Date().toISOString().slice(0, 10)
   const fileName = `암기노트-백업-${stamp}.json`
+  const file = new File([blob], fileName, { type: 'application/json' })
+
+  if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: fileName })
+      return { fileName, byteSize: blob.size }
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') {
+        return { fileName, byteSize: blob.size }
+      }
+    }
+  }
+
   const url = URL.createObjectURL(blob)
   try {
     const a = document.createElement('a')

@@ -33,6 +33,20 @@ body {
   isolation: isolate;
 }
 
+/* 학습 본문: iOS에서 canvas가 터치를 가로채지 않게 하고, 세로 팬은 네이티브 스크롤 */
+.pdf-reader-scroll {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+}
+
+.pdf-reader-scroll .react-pdf__Page,
+.pdf-reader-scroll .react-pdf__Page canvas {
+  pointer-events: none;
+  touch-action: pan-x pan-y;
+}
+
 /* 손가락 탭 영역 최소 44px 보조 */
 .touch-target {
   min-height: 44px;
