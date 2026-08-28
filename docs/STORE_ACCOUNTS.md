@@ -9,7 +9,7 @@
 | 앱 이름 | 가림 암기노트 |
 | Bundle / Application ID | `com.clowood.amginote` |
 | 개인정보처리방침 | https://app-garim.pages.dev/privacy.html |
-| 지원 URL (임시) | https://app-garim.pages.dev |
+| 지원 URL | https://app-garim.pages.dev/support.html |
 | 문의 | clowood.cy@gmail.com |
 
 ---

@@ -47,19 +47,33 @@ Get-Content amginote-cert.key
 | 부제 | PDF 가리고 오늘 복습 |
 | 설명 | 아래「스토어 문구」복사 |
 | 키워드 | 아래 키워드 |
-| 지원 URL | https://app-garim.pages.dev |
+| 지원 URL | https://app-garim.pages.dev/support.html |
 | 마케팅 URL | (비워도 됨) |
 | 개인정보 처리방침 | https://app-garim.pages.dev/privacy.html |
 | 카테고리 | 교육 / 생산성 |
 | 연령 | 4+ (광고·수집 없음) |
 | 가격 | 무료 |
 
-**스크린샷 (필수)**  
-아이패드 Safari 또는 TestFlight 앱에서 캡처 →  
-- 아이폰 6.7" 또는 6.5" **최소 1장** (필수인 기기 세트가 ASC에 표시됨)  
-- 아이패드 13" / 12.9" 권장 (타깃이 아이패드면)
+문구 원본은 `store/ios/metadata/ko/` 에도 있습니다.
 
-캡처 추천: 오늘 복습 홈 · PDF 가림 · 복습 채점 화면
+**스크린샷 (필수)**  
+`store/ios/screenshots/` PNG를 App Store Connect에 그대로 업로드합니다.
+
+| 세트 | 크기 | 폴더 |
+|------|------|------|
+| 아이폰 6.9" | 1320 × 2868 | `store/ios/screenshots/iphone-6.9/` |
+| 아이패드 13" | 2064 × 2752 | `store/ios/screenshots/ipad-13/` |
+
+캡처 화면: 오늘 복습 · 복습 가림 · 서재 · PDF 가림 · 가림 허브
+
+### 앱 개인정보(App Privacy) 질문
+
+| 질문 | 답 |
+|------|-----|
+| 데이터 수집 | 아니요 |
+| 추적(ATT) | 아니요 |
+| 광고 식별자 | 사용 안 함 |
+| 계정 | 없음 |
 
 ### 4. 심사 제출
 

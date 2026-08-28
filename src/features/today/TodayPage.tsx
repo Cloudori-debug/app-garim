@@ -149,7 +149,9 @@ export function TodayPage() {
         {!loading && dueCount === 0 && practiceCount === 0 && (
           <div className="mt-10 flex flex-col items-center gap-4">
             <p className="text-center text-sm text-[var(--muted)]">
-              서재에서 가림을 만들면 여기에 모여요.
+              아직 오늘 복습할 가림이 없어요.
+              <br />
+              샘플로 바로 체험하거나, 서재에 PDF를 넣고 가림을 그려 보세요.
             </p>
             <SampleStartButton onSeeded={() => navigate('/review')} />
           </div>

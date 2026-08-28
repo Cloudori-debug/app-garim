@@ -4,7 +4,7 @@ import { ChevronRight } from 'lucide-react'
 
 import { useTheme } from '@/app/ThemeProvider'
 import * as backupRepo from '@/entities/backup/repository'
-import { APP_VERSION, PRIVACY_URL } from '@/shared/lib/appMeta'
+import { APP_VERSION, PRIVACY_URL, SUPPORT_URL } from '@/shared/lib/appMeta'
 import { isNativeApp } from '@/shared/lib/platform'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/lib/cn'
@@ -213,14 +213,24 @@ export function MorePage() {
               가림 암기노트 {APP_VERSION}
               {isNativeApp() ? ' · 스토어 앱' : ''}
             </p>
-            <a
-              href={PRIVACY_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-block text-sm font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
-            >
-              개인정보처리방침
-            </a>
+            <div className="mt-2 flex flex-col items-start gap-1.5">
+              <a
+                href={SUPPORT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
+              >
+                고객 지원
+              </a>
+              <a
+                href={PRIVACY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
+              >
+                개인정보처리방침
+              </a>
+            </div>
           </div>
         </section>
       </div>

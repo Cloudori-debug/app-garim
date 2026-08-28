@@ -9,6 +9,9 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     iosScheme: 'https',
   },
+  ios: {
+    contentInset: 'automatic',
+  },
   android: {
     allowMixedContent: false,
     backgroundColor: '#0F766E',
