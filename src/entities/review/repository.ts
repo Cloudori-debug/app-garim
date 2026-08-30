@@ -30,6 +30,10 @@ export async function ensureReviewState(markId: string, documentId: string): Pro
   return state
 }
 
+export async function getReviewState(markId: string): Promise<ReviewState | undefined> {
+  return db.reviewStates.get(markId)
+}
+
 export async function deleteReviewState(markId: string): Promise<void> {
   await db.reviewStates.delete(markId)
 }

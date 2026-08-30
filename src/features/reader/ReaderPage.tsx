@@ -11,15 +11,19 @@ import {
   RectangleHorizontal,
   Star,
   Trash2,
+  Undo2,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
 
 import * as appStateRepo from '@/entities/app-state/repository'
 import * as documentRepo from '@/entities/document/repository'
+import * as markRepo from '@/entities/mark/repository'
 import * as pageFavoriteRepo from '@/entities/pageFavorite/repository'
+import * as reviewRepo from '@/entities/review/repository'
 import type { Document } from '@/entities/document/types'
-import type { MarkColor } from '@/entities/mark/types'
+import type { Mark, MarkColor } from '@/entities/mark/types'
+import type { ReviewState } from '@/entities/review/types'
 import { clampFitScale } from '@/features/reader/fitScale'
 import { PdfViewer } from '@/features/reader/PdfViewer'
 import { PageThumbnailRail } from '@/features/reader/PageThumbnailRail'
@@ -44,6 +48,10 @@ import {
 } from '@/shared/lib/visiblePages'
 
 const COLORS: MarkColor[] = ['yellow', 'red', 'purple']
+
+type MarkUndo =
+  | { kind: 'delete'; mark: Mark; review: ReviewState | null }
+  | { kind: 'create'; markId: string }
 
 function clampPage(n: number, pageCount: number) {
   if (!Number.isFinite(n)) return 1
@@ -70,6 +78,9 @@ export function ReaderPage() {
   const [railOpen, setRailOpen] = useState(false)
   const [pdfJsDoc, setPdfJsDoc] = useState<PDFDocumentProxy | null>(null)
   const [fileBytes, setFileBytes] = useState(0)
+  const [markUndo, setMarkUndo] = useState<MarkUndo | null>(null)
+  const markUndoRef = useRef(markUndo)
+  markUndoRef.current = markUndo
   const viewerPaneRef = useRef<HTMLDivElement>(null)
   // PDF DOM이 마운트된 뒤에만 리스너 부착 (로딩 중 early return 버그 방지)
   usePinchZoom(viewerPaneRef, zoomPercent, setZoomPercent, Boolean(doc && fileUrl))
@@ -185,6 +196,12 @@ export function ReaderPage() {
   }, [documentId, doc, page])
 
   useEffect(() => {
+    if (!selectedMarkId) return
+    const selected = marksApi.marks.find((m) => m.id === selectedMarkId)
+    if (selected && selected.page !== page) setSelectedMarkId(null)
+  }, [page, selectedMarkId, marksApi.marks])
+
+  useEffect(() => {
     setFitReady(false)
     setZoomPercent(100)
   }, [documentId, fileUrl, pageLayout])
@@ -273,6 +290,51 @@ export function ReaderPage() {
     if (updated) setDoc({ ...updated, hiddenPages: updated.hiddenPages ?? [] })
   }
 
+  const deleteMarkWithUndo = async (id: string) => {
+    const mark = marksApi.marks.find((m) => m.id === id)
+    if (!mark) return
+    const review = (await reviewRepo.getReviewState(id)) ?? null
+    await marksApi.remove(id)
+    setSelectedMarkId(null)
+    setMarkUndo({ kind: 'delete', mark, review })
+  }
+
+  const applyMarkUndo = async () => {
+    if (!markUndoRef.current) return
+    const undo = markUndoRef.current
+    if (undo.kind === 'delete') {
+      await markRepo.restoreMark(undo.mark, undo.review)
+      await marksApi.refresh()
+      setSelectedMarkId(undo.mark.id)
+      if (undo.mark.page !== page) goToPage(undo.mark.page)
+    } else {
+      await marksApi.remove(undo.markId)
+      setSelectedMarkId(null)
+    }
+    setMarkUndo(null)
+  }
+  const applyMarkUndoRef = useRef(applyMarkUndo)
+  applyMarkUndoRef.current = applyMarkUndo
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z' || e.shiftKey) return
+      const t = e.target
+      if (
+        t instanceof HTMLInputElement ||
+        t instanceof HTMLTextAreaElement ||
+        t instanceof HTMLSelectElement
+      ) {
+        return
+      }
+      if (!markUndoRef.current) return
+      e.preventDefault()
+      void applyMarkUndoRef.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const canPrev = pageCoverMode ? page > 1 : adjacentVisiblePage(page, visiblePages, -1) != null
   const canNext = pageCoverMode
     ? page < pageCount
@@ -296,6 +358,16 @@ export function ReaderPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] bg-[var(--surface)] px-3 py-2">
+        <Button
+          size="sm"
+          variant={railOpen ? 'secondary' : 'ghost'}
+          className="hidden sm:inline-flex"
+          title={railOpen ? '책장 닫기' : '페이지 미리보기 책장'}
+          onClick={() => setRailOpen((open) => !open)}
+        >
+          <PanelLeft className="h-4 w-4" />
+          책장
+        </Button>
         <div className="flex rounded-md bg-[var(--border)]/80 p-0.5">
           <Button
             size="sm"
@@ -403,7 +475,7 @@ export function ReaderPage() {
               ))}
             </div>
 
-            {selectedMark && (
+            {selectedMark && selectedMark.page === page && (
               <>
                 <span className="hidden h-4 w-px bg-neutral-300 sm:block" aria-hidden />
                 <span className="text-xs font-medium text-[var(--muted)]">
@@ -412,12 +484,7 @@ export function ReaderPage() {
                 <Button
                   size="sm"
                   variant="danger"
-                  onClick={() => {
-                    if (confirm('이 가림을 삭제할까요?')) {
-                      void marksApi.remove(selectedMark.id)
-                      setSelectedMarkId(null)
-                    }
-                  }}
+                  onClick={() => void deleteMarkWithUndo(selectedMark.id)}
                 >
                   <Trash2 className="h-4 w-4" />
                   삭제
@@ -452,6 +519,17 @@ export function ReaderPage() {
 
         {(mode === 'study' || mode === 'wordCover') && pageMarks.length > 0 && (
           <div className="flex items-center gap-1">
+            {markUndo && (
+              <Button
+                size="sm"
+                variant="outline"
+                title="되돌리기 (Ctrl+Z)"
+                onClick={() => void applyMarkUndo()}
+              >
+                <Undo2 className="h-4 w-4" />
+                되돌리기
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"
@@ -473,17 +551,19 @@ export function ReaderPage() {
           </div>
         )}
 
-        <div className="ml-auto flex items-center gap-1">
+        {mode === 'wordCover' && markUndo && pageMarks.length === 0 && (
           <Button
             size="sm"
-            variant={railOpen ? 'secondary' : 'ghost'}
-            className="hidden sm:inline-flex"
-            title={railOpen ? '책장 닫기' : '페이지 미리보기 책장'}
-            onClick={() => setRailOpen((open) => !open)}
+            variant="outline"
+            title="되돌리기 (Ctrl+Z)"
+            onClick={() => void applyMarkUndo()}
           >
-            <PanelLeft className="h-4 w-4" />
-            책장
+            <Undo2 className="h-4 w-4" />
+            되돌리기
           </Button>
+        )}
+
+        <div className="ml-auto flex items-center gap-1">
           <Button size="icon" variant="ghost" disabled={!canPrev} onClick={() => goAdjacent(-1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -587,6 +667,7 @@ export function ReaderPage() {
             pageCoverMode={pageCoverMode}
             onSelectPage={goToPage}
             onToggleHidden={(p) => void togglePageHidden(p)}
+            onClose={() => setRailOpen(false)}
           />
         ) : null}
         <div
@@ -630,13 +711,15 @@ export function ReaderPage() {
                 }}
                 onCreateMark={(markPage, rect) => {
                   void marksApi.create({ page: markPage, color, ...rect }).then((mark) => {
-                    if (mark) setSelectedMarkId(mark.id)
+                    if (mark) {
+                      setSelectedMarkId(mark.id)
+                      setMarkUndo({ kind: 'create', markId: mark.id })
+                    }
                   })
                 }}
                 onUpdateGeometry={(id, rect) => void marksApi.updateGeometry(id, rect)}
                 onDeleteMark={(id) => {
-                  void marksApi.remove(id)
-                  setSelectedMarkId(null)
+                  void deleteMarkWithUndo(id)
                 }}
                 onToggleStudy={(id) => void marksApi.toggleHidden(id)}
                 onToggleFavorite={(id, fav) => void marksApi.toggleFavorite(id, fav)}
@@ -645,6 +728,20 @@ export function ReaderPage() {
           )}
         </div>
       </div>
+
+      {markUndo && (
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-3 py-2">
+          <p className="text-xs text-[var(--ink)]">
+            {markUndo.kind === 'delete'
+              ? `${markUndo.mark.page}페이지 단어 가림을 삭제했습니다.`
+              : '방금 만든 단어 가림을 되돌릴 수 있습니다.'}
+          </p>
+          <Button size="sm" variant="outline" onClick={() => void applyMarkUndo()}>
+            <Undo2 className="h-4 w-4" />
+            되돌리기
+          </Button>
+        </div>
+      )}
 
       {mode === 'wordCover' && !selectedMark && pageMarks.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--border)] bg-[var(--surface)] px-3 py-2">

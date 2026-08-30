@@ -1,6 +1,7 @@
 import { db } from '@/entities/db'
 import type { Mark, MarkColor } from '@/entities/mark/types'
 import * as reviewRepo from '@/entities/review/repository'
+import type { ReviewState } from '@/entities/review/types'
 import { clampNormRect, isValidMarkSize } from '@/shared/lib/geometry'
 import { createId, nowIso } from '@/shared/lib/id'
 
@@ -62,6 +63,15 @@ export async function deleteMark(id: string): Promise<void> {
   await db.transaction('rw', db.marks, db.reviewStates, async () => {
     await db.marks.delete(id)
     await reviewRepo.deleteReviewState(id)
+  })
+}
+
+/** 삭제한 가림을 같은 id로 되돌립니다. 복습 일정도 함께 복구합니다. */
+export async function restoreMark(mark: Mark, review?: ReviewState | null): Promise<void> {
+  await db.transaction('rw', db.marks, db.reviewStates, async () => {
+    await db.marks.put(mark)
+    if (review) await db.reviewStates.put(review)
+    else await reviewRepo.ensureReviewState(mark.id, mark.documentId)
   })
 }
 

@@ -22,6 +22,7 @@ interface PageThumbnailRailProps {
   pageCoverMode?: boolean
   onSelectPage: (page: number) => void
   onToggleHidden?: (page: number) => void
+  onClose?: () => void
 }
 
 function CachedThumb({
@@ -106,6 +107,7 @@ export function PageThumbnailRail({
   pageCoverMode = false,
   onSelectPage,
   onToggleHidden,
+  onClose,
 }: PageThumbnailRailProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null)
@@ -148,8 +150,15 @@ export function PageThumbnailRail({
       className="hidden w-[92px] shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)] sm:flex"
       aria-label="페이지 미리보기"
     >
-      <div className="border-b border-[var(--border)] px-2 py-1.5 text-center text-[10px] font-medium text-[var(--muted)]">
-        책장
+      <div className="border-b border-[var(--border)] px-1 py-1">
+        <button
+          type="button"
+          className="w-full rounded px-1 py-0.5 text-center text-[10px] font-medium text-[var(--muted)] hover:bg-[var(--border)]"
+          onClick={onClose}
+          title="책장 닫기"
+        >
+          책장
+        </button>
       </div>
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-2">
         {pages.map((p) => {

@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bookmark, Eye, EyeOff, Trash2 } from 'lucide-react'
+import { Bookmark, Eye, EyeOff, Trash2, Undo2 } from 'lucide-react'
 
 import * as documentRepo from '@/entities/document/repository'
 import * as markRepo from '@/entities/mark/repository'
 import * as pageFavoriteRepo from '@/entities/pageFavorite/repository'
+import * as reviewRepo from '@/entities/review/repository'
 import type { HiddenPageItem } from '@/entities/document/types'
 import type { Mark } from '@/entities/mark/types'
 import type { PageFavoriteItem } from '@/entities/pageFavorite/types'
+import type { ReviewState } from '@/entities/review/types'
 import { PdfPageThumb } from '@/features/marks/PdfPageThumb'
 import { useDocumentPdfUrls } from '@/features/marks/useDocumentPdfUrls'
 import { Button } from '@/shared/ui/button'
@@ -32,6 +34,10 @@ export function MarksHubPage() {
   const [hiddenPages, setHiddenPages] = useState<HiddenPageItem[]>([])
   const [loading, setLoading] = useState(true)
   const [filterDocId, setFilterDocId] = useState<string | 'all'>('all')
+  const [deletedUndo, setDeletedUndo] = useState<{
+    mark: MarkRow
+    review: ReviewState | null
+  } | null>(null)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -151,9 +157,20 @@ export function MarksHubPage() {
           <WordCoversPanel
             items={filteredMarks}
             pdfUrls={pdfUrls}
+            undo={deletedUndo}
+            onUndo={async () => {
+              if (!deletedUndo) return
+              await markRepo.restoreMark(deletedUndo.mark, deletedUndo.review)
+              setDeletedUndo(null)
+              await refresh()
+            }}
             onDelete={async (id) => {
+              const mark = marks.find((m) => m.id === id)
+              if (!mark) return
               if (!confirm('이 단어 가림을 삭제할까요?')) return
+              const review = (await reviewRepo.getReviewState(id)) ?? null
               await markRepo.deleteMark(id)
+              setDeletedUndo({ mark, review })
               await refresh()
             }}
           />
@@ -239,12 +256,16 @@ function WordCoversPanel({
   items,
   pdfUrls,
   onDelete,
+  undo,
+  onUndo,
 }: {
   items: MarkRow[]
   pdfUrls: Record<string, string>
   onDelete: (id: string) => void
+  undo: { mark: MarkRow; review: ReviewState | null } | null
+  onUndo: () => void
 }) {
-  if (items.length === 0) {
+  if (items.length === 0 && !undo) {
     return (
       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center">
         <EyeOff className="mx-auto h-8 w-8 text-[var(--muted)]" />
@@ -257,51 +278,66 @@ function WordCoversPanel({
   }
 
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-      {items.map((item) => (
-        <li
-          key={item.id}
-          className="group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]"
-        >
-          <Link
-            to={`/read/${item.documentId}?page=${item.page}&mark=${item.id}&mode=wordCover`}
-            className="block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
-          >
-            <div className="flex justify-center bg-[var(--bg)] py-2">
-              <PdfPageThumb
-                fileUrl={pdfUrls[item.documentId]}
-                page={item.page}
-                width={140}
-                badge={
-                  <>
-                    <span
-                      className={cn(
-                        'absolute top-1.5 left-1.5 h-3.5 w-3.5 rounded-full border-2 border-white shadow',
-                        COLOR_DOT[item.color],
-                      )}
-                      title={item.color}
-                    />
-                    <MarkRectOverlay mark={item} />
-                  </>
-                }
-              />
-            </div>
-            <p className="border-t border-[var(--border)] bg-[var(--bg)] py-1.5 text-center text-xs font-semibold tabular-nums text-[var(--ink)]">
-              {item.page}페이지
-            </p>
-          </Link>
-          <Button
-            size="icon"
-            variant="ghost"
-            title="단어 가림 삭제"
-            className="absolute top-1 right-1 h-8 w-8 bg-[var(--surface)]/90 opacity-90 shadow-sm hover:opacity-100"
-            onClick={() => void onDelete(item.id)}
-          >
-            <Trash2 className="h-4 w-4 text-[var(--muted)]" />
+    <div className="space-y-3">
+      {undo && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2">
+          <p className="text-sm text-[var(--ink)]">
+            {undo.mark.page}페이지 단어 가림을 삭제했습니다.
+          </p>
+          <Button size="sm" variant="outline" onClick={() => void onUndo()}>
+            <Undo2 className="h-4 w-4" />
+            되돌리기
           </Button>
-        </li>
-      ))}
-    </ul>
+        </div>
+      )}
+      {items.length > 0 && (
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          {items.map((item) => (
+            <li
+              key={item.id}
+              className="group relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]"
+            >
+              <Link
+                to={`/read/${item.documentId}?page=${item.page}&mark=${item.id}&mode=wordCover`}
+                className="block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+              >
+                <div className="flex justify-center bg-[var(--bg)] py-2">
+                  <PdfPageThumb
+                    fileUrl={pdfUrls[item.documentId]}
+                    page={item.page}
+                    width={140}
+                    badge={
+                      <>
+                        <span
+                          className={cn(
+                            'absolute top-1.5 left-1.5 h-3.5 w-3.5 rounded-full border-2 border-white shadow',
+                            COLOR_DOT[item.color],
+                          )}
+                          title={item.color}
+                        />
+                        <MarkRectOverlay mark={item} />
+                      </>
+                    }
+                  />
+                </div>
+                <p className="border-t border-[var(--border)] bg-[var(--bg)] py-1.5 text-center text-xs font-semibold tabular-nums text-[var(--ink)]">
+                  {item.page}페이지
+                </p>
+              </Link>
+              <Button
+                size="icon"
+                variant="ghost"
+                title="단어 가림 삭제"
+                className="absolute top-1 right-1 h-8 w-8 bg-[var(--surface)]/90 opacity-90 shadow-sm hover:opacity-100"
+                onClick={() => void onDelete(item.id)}
+              >
+                <Trash2 className="h-4 w-4 text-[var(--muted)]" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 
