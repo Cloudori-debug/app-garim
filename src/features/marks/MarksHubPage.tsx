@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bookmark, Eye, EyeOff, Trash2, Undo2 } from 'lucide-react'
+import { Bookmark, Eye, EyeOff, Trash2 } from 'lucide-react'
 
 import * as documentRepo from '@/entities/document/repository'
 import * as markRepo from '@/entities/mark/repository'
@@ -12,7 +12,10 @@ import type { PageFavoriteItem } from '@/entities/pageFavorite/types'
 import type { ReviewState } from '@/entities/review/types'
 import { PdfPageThumb } from '@/features/marks/PdfPageThumb'
 import { useDocumentPdfUrls } from '@/features/marks/useDocumentPdfUrls'
+import { useOpHistory } from '@/features/reader/useOpHistory'
 import { Button } from '@/shared/ui/button'
+import { SegmentedGroup } from '@/shared/ui/tool-cluster'
+import { UndoRedoButtons } from '@/shared/ui/undo-redo'
 import { cn } from '@/shared/lib/cn'
 
 type HubTab = 'favorites' | 'wordCovers' | 'pageCovers'
@@ -20,6 +23,8 @@ type HubTab = 'favorites' | 'wordCovers' | 'pageCovers'
 interface MarkRow extends Mark {
   fileName: string
 }
+
+type HubDeleteOp = { mark: MarkRow; review: ReviewState | null }
 
 const COLOR_DOT: Record<Mark['color'], string> = {
   yellow: 'bg-yellow-400',
@@ -34,10 +39,8 @@ export function MarksHubPage() {
   const [hiddenPages, setHiddenPages] = useState<HiddenPageItem[]>([])
   const [loading, setLoading] = useState(true)
   const [filterDocId, setFilterDocId] = useState<string | 'all'>('all')
-  const [deletedUndo, setDeletedUndo] = useState<{
-    mark: MarkRow
-    review: ReviewState | null
-  } | null>(null)
+  const history = useOpHistory<HubDeleteOp>()
+  const applyingHistory = useRef(false)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -64,6 +67,69 @@ export function MarksHubPage() {
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  const undoHub = async () => {
+    const op = history.takeUndo()
+    if (!op) return
+    applyingHistory.current = true
+    try {
+      await markRepo.restoreMark(op.mark, op.review)
+      await refresh()
+    } finally {
+      applyingHistory.current = false
+    }
+  }
+
+  const redoHub = async () => {
+    const op = history.takeRedo()
+    if (!op) return
+    applyingHistory.current = true
+    try {
+      await markRepo.deleteMark(op.mark.id)
+      await refresh()
+    } finally {
+      applyingHistory.current = false
+    }
+  }
+
+  const undoHubRef = useRef(undoHub)
+  undoHubRef.current = undoHub
+  const redoHubRef = useRef(redoHub)
+  redoHubRef.current = redoHub
+  const tabRef = useRef(tab)
+  tabRef.current = tab
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (tabRef.current !== 'wordCovers') return
+      if (!(e.ctrlKey || e.metaKey)) return
+      const t = e.target
+      if (
+        t instanceof HTMLInputElement ||
+        t instanceof HTMLTextAreaElement ||
+        t instanceof HTMLSelectElement
+      ) {
+        return
+      }
+      const key = e.key.toLowerCase()
+      if (key === 'z' && e.shiftKey) {
+        e.preventDefault()
+        void redoHubRef.current()
+        return
+      }
+      if (key === 'z') {
+        e.preventDefault()
+        void undoHubRef.current()
+        return
+      }
+      if (key === 'y') {
+        e.preventDefault()
+        void redoHubRef.current()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const docOptions = useMemo(() => {
     const map = new Map<string, string>()
@@ -101,7 +167,7 @@ export function MarksHubPage() {
         <p className="mt-1 text-sm text-[var(--muted)]">
           즐겨찾기 · 단어 가림 · 페이지 가림을 모아 봅니다.
         </p>
-        <div className="mt-3 flex gap-1 rounded-lg bg-[var(--border)]/80 p-1">
+        <SegmentedGroup size="md" className="mt-3">
           {(
             [
               { id: 'favorites' as const, label: '즐겨찾기' },
@@ -123,7 +189,7 @@ export function MarksHubPage() {
               {t.label}
             </button>
           ))}
-        </div>
+        </SegmentedGroup>
 
         {docOptions.length > 0 && (
           <select
@@ -157,20 +223,17 @@ export function MarksHubPage() {
           <WordCoversPanel
             items={filteredMarks}
             pdfUrls={pdfUrls}
-            undo={deletedUndo}
-            onUndo={async () => {
-              if (!deletedUndo) return
-              await markRepo.restoreMark(deletedUndo.mark, deletedUndo.review)
-              setDeletedUndo(null)
-              await refresh()
-            }}
+            canUndo={history.canUndo}
+            canRedo={history.canRedo}
+            onUndo={() => void undoHub()}
+            onRedo={() => void redoHub()}
             onDelete={async (id) => {
               const mark = marks.find((m) => m.id === id)
               if (!mark) return
               if (!confirm('이 단어 가림을 삭제할까요?')) return
               const review = (await reviewRepo.getReviewState(id)) ?? null
               await markRepo.deleteMark(id)
-              setDeletedUndo({ mark, review })
+              if (!applyingHistory.current) history.push({ mark, review })
               await refresh()
             }}
           />
@@ -256,16 +319,20 @@ function WordCoversPanel({
   items,
   pdfUrls,
   onDelete,
-  undo,
+  canUndo,
+  canRedo,
   onUndo,
+  onRedo,
 }: {
   items: MarkRow[]
   pdfUrls: Record<string, string>
   onDelete: (id: string) => void
-  undo: { mark: MarkRow; review: ReviewState | null } | null
+  canUndo: boolean
+  canRedo: boolean
   onUndo: () => void
+  onRedo: () => void
 }) {
-  if (items.length === 0 && !undo) {
+  if (items.length === 0 && !canUndo) {
     return (
       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center">
         <EyeOff className="mx-auto h-8 w-8 text-[var(--muted)]" />
@@ -279,17 +346,11 @@ function WordCoversPanel({
 
   return (
     <div className="space-y-3">
-      {undo && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2">
-          <p className="text-sm text-[var(--ink)]">
-            {undo.mark.page}페이지 단어 가림을 삭제했습니다.
-          </p>
-          <Button size="sm" variant="outline" onClick={() => void onUndo()}>
-            <Undo2 className="h-4 w-4" />
-            되돌리기
-          </Button>
-        </div>
-      )}
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--accent-soft)]/40 px-3 py-2">
+        <span className="text-[10px] font-semibold tracking-wide text-[var(--accent)]">편집</span>
+        <UndoRedoButtons canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo} />
+        <p className="text-[11px] text-[var(--muted)]">삭제한 가림은 실행 취소로 되돌릴 수 있습니다.</p>
+      </div>
       {items.length > 0 && (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {items.map((item) => (

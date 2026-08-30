@@ -33,6 +33,7 @@ import type { Folder } from '@/entities/folder/types'
 import { createId, nowIso } from '@/shared/lib/id'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
+import { SegmentedGroup } from '@/shared/ui/tool-cluster'
 import { cn } from '@/shared/lib/cn'
 
 type DropTarget = { kind: 'root' } | { kind: 'nest'; folderId: string } | null
@@ -494,7 +495,7 @@ export function LibraryPage() {
 
       <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[280px_1fr]">
           <aside className="flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
-            <div className="flex gap-1 rounded-lg bg-[var(--border)]/80 p-1">
+            <SegmentedGroup size="md" className="w-full">
               <Button
                 size="sm"
                 variant="ghost"
@@ -517,7 +518,7 @@ export function LibraryPage() {
                 <Pencil className="h-4 w-4" />
                 편집
               </Button>
-            </div>
+            </SegmentedGroup>
             {editMode && (
               <p className="px-1 text-[11px] text-[var(--muted)]">
                 왼쪽 ⋮⋮ 드래그 · 종료 시 저장하지 않으면 변경이 취소됩니다

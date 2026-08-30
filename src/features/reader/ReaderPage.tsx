@@ -11,7 +11,6 @@ import {
   RectangleHorizontal,
   Star,
   Trash2,
-  Undo2,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
@@ -22,15 +21,17 @@ import * as markRepo from '@/entities/mark/repository'
 import * as pageFavoriteRepo from '@/entities/pageFavorite/repository'
 import * as reviewRepo from '@/entities/review/repository'
 import type { Document } from '@/entities/document/types'
-import type { Mark, MarkColor } from '@/entities/mark/types'
-import type { ReviewState } from '@/entities/review/types'
+import type { MarkColor } from '@/entities/mark/types'
 import { clampFitScale } from '@/features/reader/fitScale'
 import { PdfViewer } from '@/features/reader/PdfViewer'
 import { PageThumbnailRail } from '@/features/reader/PageThumbnailRail'
 import { isHeavyPdf } from '@/features/reader/pdfBudget'
 import { revokeThumbs, setThumbConcurrency } from '@/features/reader/pageThumbCache'
 import type { ReaderMode } from '@/features/reader/types'
+import type { MarkHistoryOp } from '@/features/reader/markHistory'
+import { rectsEqual } from '@/features/reader/markHistory'
 import { useMarks } from '@/features/reader/useMarks'
+import { useOpHistory } from '@/features/reader/useOpHistory'
 import {
   isMaxZoom,
   isMinZoom,
@@ -40,6 +41,8 @@ import {
 } from '@/features/reader/zoomSteps'
 import { usePinchZoom } from '@/features/reader/usePinchZoom'
 import { Button } from '@/shared/ui/button'
+import { SegmentedGroup, ToolCluster } from '@/shared/ui/tool-cluster'
+import { UndoRedoButtons } from '@/shared/ui/undo-redo'
 import { cn } from '@/shared/lib/cn'
 import {
   adjacentVisiblePage,
@@ -49,9 +52,13 @@ import {
 
 const COLORS: MarkColor[] = ['yellow', 'red', 'purple']
 
-type MarkUndo =
-  | { kind: 'delete'; mark: Mark; review: ReviewState | null }
-  | { kind: 'create'; markId: string }
+function isTypingTarget(t: EventTarget | null) {
+  return (
+    t instanceof HTMLInputElement ||
+    t instanceof HTMLTextAreaElement ||
+    t instanceof HTMLSelectElement
+  )
+}
 
 function clampPage(n: number, pageCount: number) {
   if (!Number.isFinite(n)) return 1
@@ -78,9 +85,15 @@ export function ReaderPage() {
   const [railOpen, setRailOpen] = useState(false)
   const [pdfJsDoc, setPdfJsDoc] = useState<PDFDocumentProxy | null>(null)
   const [fileBytes, setFileBytes] = useState(0)
-  const [markUndo, setMarkUndo] = useState<MarkUndo | null>(null)
-  const markUndoRef = useRef(markUndo)
-  markUndoRef.current = markUndo
+  const {
+    canUndo,
+    canRedo,
+    push: pushHistory,
+    takeUndo,
+    takeRedo,
+    clear: clearHistory,
+  } = useOpHistory<MarkHistoryOp>()
+  const applyingHistory = useRef(false)
   const viewerPaneRef = useRef<HTMLDivElement>(null)
   // PDF DOM이 마운트된 뒤에만 리스너 부착 (로딩 중 early return 버그 방지)
   usePinchZoom(viewerPaneRef, zoomPercent, setZoomPercent, Boolean(doc && fileUrl))
@@ -290,46 +303,99 @@ export function ReaderPage() {
     if (updated) setDoc({ ...updated, hiddenPages: updated.hiddenPages ?? [] })
   }
 
+  const recordOp = (op: MarkHistoryOp) => {
+    if (applyingHistory.current) return
+    pushHistory(op)
+  }
+
+  const applyOp = async (op: MarkHistoryOp, direction: 'undo' | 'redo') => {
+    applyingHistory.current = true
+    try {
+      if (op.kind === 'create') {
+        if (direction === 'undo') {
+          await marksApi.remove(op.mark.id)
+          setSelectedMarkId(null)
+        } else {
+          await markRepo.restoreMark(op.mark)
+          await marksApi.refresh()
+          setSelectedMarkId(op.mark.id)
+          goToPage(op.mark.page)
+        }
+        return
+      }
+      if (op.kind === 'delete') {
+        if (direction === 'undo') {
+          await markRepo.restoreMark(op.mark, op.review)
+          await marksApi.refresh()
+          setSelectedMarkId(op.mark.id)
+          goToPage(op.mark.page)
+        } else {
+          await marksApi.remove(op.mark.id)
+          setSelectedMarkId(null)
+        }
+        return
+      }
+      if (op.kind === 'geometry') {
+        await marksApi.updateGeometry(op.id, direction === 'undo' ? op.before : op.after)
+        setSelectedMarkId(op.id)
+        return
+      }
+      await marksApi.setColor(op.id, direction === 'undo' ? op.before : op.after)
+      setSelectedMarkId(op.id)
+      setColor(direction === 'undo' ? op.before : op.after)
+    } finally {
+      applyingHistory.current = false
+    }
+  }
+
+  const undoMark = async () => {
+    const op = takeUndo()
+    if (!op) return
+    await applyOp(op, 'undo')
+  }
+
+  const redoMark = async () => {
+    const op = takeRedo()
+    if (!op) return
+    await applyOp(op, 'redo')
+  }
+
   const deleteMarkWithUndo = async (id: string) => {
     const mark = marksApi.marks.find((m) => m.id === id)
     if (!mark) return
     const review = (await reviewRepo.getReviewState(id)) ?? null
     await marksApi.remove(id)
     setSelectedMarkId(null)
-    setMarkUndo({ kind: 'delete', mark, review })
+    recordOp({ kind: 'delete', mark, review })
   }
 
-  const applyMarkUndo = async () => {
-    if (!markUndoRef.current) return
-    const undo = markUndoRef.current
-    if (undo.kind === 'delete') {
-      await markRepo.restoreMark(undo.mark, undo.review)
-      await marksApi.refresh()
-      setSelectedMarkId(undo.mark.id)
-      if (undo.mark.page !== page) goToPage(undo.mark.page)
-    } else {
-      await marksApi.remove(undo.markId)
-      setSelectedMarkId(null)
-    }
-    setMarkUndo(null)
-  }
-  const applyMarkUndoRef = useRef(applyMarkUndo)
-  applyMarkUndoRef.current = applyMarkUndo
+  const undoMarkRef = useRef(undoMark)
+  undoMarkRef.current = undoMark
+  const redoMarkRef = useRef(redoMark)
+  redoMarkRef.current = redoMark
+
+  useEffect(() => {
+    clearHistory()
+  }, [documentId, clearHistory])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z' || e.shiftKey) return
-      const t = e.target
-      if (
-        t instanceof HTMLInputElement ||
-        t instanceof HTMLTextAreaElement ||
-        t instanceof HTMLSelectElement
-      ) {
+      if (!(e.ctrlKey || e.metaKey) || isTypingTarget(e.target)) return
+      const key = e.key.toLowerCase()
+      if (key === 'z' && e.shiftKey) {
+        e.preventDefault()
+        void redoMarkRef.current()
         return
       }
-      if (!markUndoRef.current) return
-      e.preventDefault()
-      void applyMarkUndoRef.current()
+      if (key === 'z') {
+        e.preventDefault()
+        void undoMarkRef.current()
+        return
+      }
+      if (key === 'y') {
+        e.preventDefault()
+        void redoMarkRef.current()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -358,17 +424,7 @@ export function ReaderPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] bg-[var(--surface)] px-3 py-2">
-        <Button
-          size="sm"
-          variant={railOpen ? 'secondary' : 'ghost'}
-          className="hidden sm:inline-flex"
-          title={railOpen ? '책장 닫기' : '페이지 미리보기 책장'}
-          onClick={() => setRailOpen((open) => !open)}
-        >
-          <PanelLeft className="h-4 w-4" />
-          책장
-        </Button>
-        <div className="flex rounded-md bg-[var(--border)]/80 p-0.5">
+        <SegmentedGroup>
           <Button
             size="sm"
             variant={mode === 'study' ? 'default' : 'ghost'}
@@ -396,7 +452,7 @@ export function ReaderPage() {
           >
             페이지 가림
           </Button>
-        </div>
+        </SegmentedGroup>
 
         <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5 px-1">
           <button
@@ -446,129 +502,11 @@ export function ReaderPage() {
           </button>
         </div>
 
-        {mode === 'wordCover' && (
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1">
-              {COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  title={selectedMark ? `선택 가림 색 · ${c}` : `새 가림 색 · ${c}`}
-                  className={cn(
-                    'h-6 w-6 rounded-full border-2',
-                    c === 'yellow' && 'bg-yellow-300',
-                    c === 'red' && 'bg-red-400',
-                    c === 'purple' && 'bg-purple-400',
-                    (selectedMark ? selectedMark.color === c : color === c)
-                      ? 'border-neutral-900'
-                      : 'border-transparent',
-                  )}
-                  onClick={() => {
-                    if (selectedMark) {
-                      void marksApi.setColor(selectedMark.id, c)
-                      setColor(c)
-                    } else {
-                      setColor(c)
-                    }
-                  }}
-                />
-              ))}
-            </div>
-
-            {selectedMark && selectedMark.page === page && (
-              <>
-                <span className="hidden h-4 w-px bg-neutral-300 sm:block" aria-hidden />
-                <span className="text-xs font-medium text-[var(--muted)]">
-                  선택됨 · {selectedMark.page}p
-                </span>
-                <Button
-                  size="sm"
-                  variant="danger"
-                  onClick={() => void deleteMarkWithUndo(selectedMark.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  삭제
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setSelectedMarkId(null)}>
-                  선택 해제
-                </Button>
-              </>
-            )}
-          </div>
-        )}
-
-        {mode === 'pageCover' && (
-          <Button
-            size="sm"
-            variant={pageIsHidden ? 'secondary' : 'default'}
-            onClick={() => void togglePageHidden(page)}
-          >
-            {pageIsHidden ? (
-              <>
-                <Eye className="h-4 w-4" />
-                이 페이지 보이기
-              </>
-            ) : (
-              <>
-                <EyeOff className="h-4 w-4" />
-                이 페이지 숨기기
-              </>
-            )}
-          </Button>
-        )}
-
-        {(mode === 'study' || mode === 'wordCover') && pageMarks.length > 0 && (
-          <div className="flex items-center gap-1">
-            {markUndo && (
-              <Button
-                size="sm"
-                variant="outline"
-                title="되돌리기 (Ctrl+Z)"
-                onClick={() => void applyMarkUndo()}
-              >
-                <Undo2 className="h-4 w-4" />
-                되돌리기
-              </Button>
-            )}
-            <Button
-              size="sm"
-              variant="ghost"
-              title="이 페이지 가림 전부 열기"
-              onClick={() => void marksApi.setHiddenBulk(false, page)}
-            >
-              <Eye className="h-4 w-4" />
-              <span className="hidden sm:inline">전부 열기</span>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <ToolCluster>
+            <Button size="icon" variant="ghost" className="h-8 w-8" disabled={!canPrev} onClick={() => goAdjacent(-1)}>
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              title="이 페이지 가림 전부 가리기"
-              onClick={() => void marksApi.setHiddenBulk(true, page)}
-            >
-              <EyeOff className="h-4 w-4" />
-              <span className="hidden sm:inline">전부 가리기</span>
-            </Button>
-          </div>
-        )}
-
-        {mode === 'wordCover' && markUndo && pageMarks.length === 0 && (
-          <Button
-            size="sm"
-            variant="outline"
-            title="되돌리기 (Ctrl+Z)"
-            onClick={() => void applyMarkUndo()}
-          >
-            <Undo2 className="h-4 w-4" />
-            되돌리기
-          </Button>
-        )}
-
-        <div className="ml-auto flex items-center gap-1">
-          <Button size="icon" variant="ghost" disabled={!canPrev} onClick={() => goAdjacent(-1)}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-
-          <div className="flex items-center gap-1 text-xs text-[var(--muted)]">
             <Button
               size="icon"
               variant="ghost"
@@ -607,69 +545,251 @@ export function ReaderPage() {
                 }
               }}
             />
-            <span className="text-[var(--muted)]">/</span>
-            <span className="min-w-6 tabular-nums">{pageCount}</span>
-            {hiddenPages.length > 0 && (
-              <span className="ml-1 text-[10px] text-[var(--muted)]">
-                (숨김 {hiddenPages.length})
-              </span>
-            )}
-          </div>
-
-          <Button size="icon" variant="ghost" disabled={!canNext} onClick={() => goAdjacent(1)}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            title="축소"
-            disabled={isMinZoom(zoomPercent)}
-            onClick={() => setZoomPercent((z) => stepZoomPercent(z, -1))}
-          >
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          <select
-            aria-label="확대 배율"
-            title="확대 배율 (핀치로도 조절)"
-            className="h-8 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-1.5 text-xs font-semibold tabular-nums text-[var(--ink)] outline-none focus:border-[var(--accent)]"
-            value={snapZoomPercent(zoomPercent)}
-            onChange={(e) => setZoomPercent(Number(e.target.value))}
-          >
-            {ZOOM_PERCENTS.map((p) => (
-              <option key={p} value={p}>
-                {p}%
-              </option>
-            ))}
-          </select>
-          <Button
-            size="icon"
-            variant="ghost"
-            title="확대"
-            disabled={isMaxZoom(zoomPercent)}
-            onClick={() => setZoomPercent((z) => stepZoomPercent(z, 1))}
-          >
-            <ZoomIn className="h-4 w-4" />
-          </Button>
+            <span className="px-0.5 text-xs text-[var(--muted)]">/</span>
+            <span className="min-w-6 pr-1 text-xs tabular-nums text-[var(--muted)]">{pageCount}</span>
+            <Button size="icon" variant="ghost" className="h-8 w-8" disabled={!canNext} onClick={() => goAdjacent(1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </ToolCluster>
+          {hiddenPages.length > 0 && (
+            <span className="text-[10px] text-[var(--muted)]">숨김 {hiddenPages.length}</span>
+          )}
+          <ToolCluster>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              title="축소"
+              disabled={isMinZoom(zoomPercent)}
+              onClick={() => setZoomPercent((z) => stepZoomPercent(z, -1))}
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <select
+              aria-label="확대 배율"
+              title="확대 배율 (핀치로도 조절)"
+              className="h-8 rounded-md border-0 bg-transparent px-1.5 text-xs font-semibold tabular-nums text-[var(--ink)] outline-none"
+              value={snapZoomPercent(zoomPercent)}
+              onChange={(e) => setZoomPercent(Number(e.target.value))}
+            >
+              {ZOOM_PERCENTS.map((p) => (
+                <option key={p} value={p}>
+                  {p}%
+                </option>
+              ))}
+            </select>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              title="확대"
+              disabled={isMaxZoom(zoomPercent)}
+              onClick={() => setZoomPercent((z) => stepZoomPercent(z, 1))}
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+          </ToolCluster>
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1">
-        {railOpen && pdfJsDoc && fileUrl ? (
-          <PageThumbnailRail
-            pdf={pdfJsDoc}
-            fileUrl={fileUrl}
-            pages={railPages}
-            pageCount={pageCount}
-            currentPage={page}
-            markCounts={markCounts}
-            favoritePages={favoritePages}
-            hiddenPages={hiddenPages}
-            pageCoverMode={pageCoverMode}
-            onSelectPage={goToPage}
-            onToggleHidden={(p) => void togglePageHidden(p)}
-            onClose={() => setRailOpen(false)}
+      {mode === 'wordCover' && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] bg-[var(--accent-soft)]/40 px-3 py-1.5">
+          <span className="shrink-0 text-[10px] font-semibold tracking-wide text-[var(--accent)]">
+            편집
+          </span>
+          <UndoRedoButtons
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={() => void undoMark()}
+            onRedo={() => void redoMark()}
           />
-        ) : null}
+          <ToolCluster label="색">
+            {COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                title={selectedMark ? `선택 가림 색 · ${c}` : `새 가림 색 · ${c}`}
+                className={cn(
+                  'h-7 w-7 rounded-full border-2',
+                  c === 'yellow' && 'bg-yellow-300',
+                  c === 'red' && 'bg-red-400',
+                  c === 'purple' && 'bg-purple-400',
+                  (selectedMark ? selectedMark.color === c : color === c)
+                    ? 'border-neutral-900'
+                    : 'border-transparent',
+                )}
+                onClick={() => {
+                  if (selectedMark) {
+                    if (selectedMark.color !== c) {
+                      void marksApi.setColor(selectedMark.id, c)
+                      recordOp({
+                        kind: 'color',
+                        id: selectedMark.id,
+                        before: selectedMark.color,
+                        after: c,
+                      })
+                    }
+                    setColor(c)
+                  } else {
+                    setColor(c)
+                  }
+                }}
+              />
+            ))}
+          </ToolCluster>
+          {selectedMark && selectedMark.page === page ? (
+            <ToolCluster>
+              <span className="hidden px-1.5 text-[11px] font-medium text-[var(--muted)] sm:inline">
+                선택 · {selectedMark.page}p
+              </span>
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => void deleteMarkWithUndo(selectedMark.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+                삭제
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelectedMarkId(null)}>
+                선택 해제
+              </Button>
+            </ToolCluster>
+          ) : null}
+          {pageMarks.length > 0 ? (
+            <ToolCluster>
+              <Button
+                size="sm"
+                variant="ghost"
+                title="이 페이지 가림 전부 열기"
+                onClick={() => void marksApi.setHiddenBulk(false, page)}
+              >
+                <Eye className="h-4 w-4" />
+                <span className="hidden sm:inline">전부 열기</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                title="이 페이지 가림 전부 가리기"
+                onClick={() => void marksApi.setHiddenBulk(true, page)}
+              >
+                <EyeOff className="h-4 w-4" />
+                <span className="hidden sm:inline">전부 가리기</span>
+              </Button>
+            </ToolCluster>
+          ) : null}
+          {pageMarks.length > 0 ? (
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+              <span className="text-[11px] text-[var(--muted)]">이 페이지 {pageMarks.length}개</span>
+              {pageMarks.map((m, i) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={cn(
+                    'rounded-md border px-2 py-0.5 text-[11px] font-medium',
+                    selectedMarkId === m.id
+                      ? 'border-[var(--accent)] bg-[var(--surface)] text-[var(--ink)]'
+                      : 'border-[var(--border-strong)] bg-[var(--surface)] text-[var(--ink)]',
+                  )}
+                  onClick={() => setSelectedMarkId(m.id)}
+                >
+                  #{i + 1}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[11px] text-[var(--muted)]">드래그해서 가림을 만드세요</p>
+          )}
+        </div>
+      )}
+
+      {mode === 'pageCover' && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] bg-[var(--accent-soft)]/40 px-3 py-1.5">
+          <span className="shrink-0 text-[10px] font-semibold tracking-wide text-[var(--accent)]">
+            편집
+          </span>
+          <ToolCluster>
+            <Button
+              size="sm"
+              variant={pageIsHidden ? 'secondary' : 'default'}
+              onClick={() => void togglePageHidden(page)}
+            >
+              {pageIsHidden ? (
+                <>
+                  <Eye className="h-4 w-4" />
+                  이 페이지 보이기
+                </>
+              ) : (
+                <>
+                  <EyeOff className="h-4 w-4" />
+                  이 페이지 숨기기
+                </>
+              )}
+            </Button>
+          </ToolCluster>
+          <p className="text-[11px] text-[var(--muted)]">
+            숨긴 페이지는 학습·단어 가림에서 보이지 않습니다.
+          </p>
+        </div>
+      )}
+
+      {mode === 'study' && pageMarks.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] bg-[var(--surface)] px-3 py-1.5">
+          <span className="shrink-0 text-[10px] font-semibold tracking-wide text-[var(--muted)]">
+            이 페이지
+          </span>
+          <ToolCluster>
+            <Button
+              size="sm"
+              variant="ghost"
+              title="이 페이지 가림 전부 열기"
+              onClick={() => void marksApi.setHiddenBulk(false, page)}
+            >
+              <Eye className="h-4 w-4" />
+              <span className="hidden sm:inline">전부 열기</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              title="이 페이지 가림 전부 가리기"
+              onClick={() => void marksApi.setHiddenBulk(true, page)}
+            >
+              <EyeOff className="h-4 w-4" />
+              <span className="hidden sm:inline">전부 가리기</span>
+            </Button>
+          </ToolCluster>
+        </div>
+      )}
+
+      <div className="flex min-h-0 flex-1">
+        <div className="hidden w-[92px] shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)] sm:flex">
+          <Button
+            size="sm"
+            variant={railOpen ? 'secondary' : 'ghost'}
+            className="h-10 w-full shrink-0 rounded-none border-b border-[var(--border)]"
+            title={railOpen ? '책장 닫기' : '페이지 미리보기 책장'}
+            onClick={() => setRailOpen((open) => !open)}
+          >
+            <PanelLeft className="h-4 w-4" />
+            책장
+          </Button>
+          {railOpen && pdfJsDoc && fileUrl ? (
+            <PageThumbnailRail
+              pdf={pdfJsDoc}
+              fileUrl={fileUrl}
+              pages={railPages}
+              pageCount={pageCount}
+              currentPage={page}
+              markCounts={markCounts}
+              favoritePages={favoritePages}
+              hiddenPages={hiddenPages}
+              pageCoverMode={pageCoverMode}
+              onSelectPage={goToPage}
+              onToggleHidden={(p) => void togglePageHidden(p)}
+              onClose={() => setRailOpen(false)}
+              hideTitle
+            />
+          ) : null}
+        </div>
         <div
           ref={viewerPaneRef}
           className="pdf-reader-scroll min-h-0 flex-1 bg-[var(--pdf-bg)] p-4"
@@ -713,11 +833,18 @@ export function ReaderPage() {
                   void marksApi.create({ page: markPage, color, ...rect }).then((mark) => {
                     if (mark) {
                       setSelectedMarkId(mark.id)
-                      setMarkUndo({ kind: 'create', markId: mark.id })
+                      recordOp({ kind: 'create', mark })
                     }
                   })
                 }}
-                onUpdateGeometry={(id, rect) => void marksApi.updateGeometry(id, rect)}
+                onUpdateGeometry={(id, rect) => {
+                  const mark = marksApi.marks.find((m) => m.id === id)
+                  if (!mark) return
+                  const before = { x: mark.x, y: mark.y, w: mark.w, h: mark.h }
+                  if (rectsEqual(before, rect)) return
+                  void marksApi.updateGeometry(id, rect)
+                  recordOp({ kind: 'geometry', id, before, after: rect })
+                }}
                 onDeleteMark={(id) => {
                   void deleteMarkWithUndo(id)
                 }}
@@ -728,52 +855,6 @@ export function ReaderPage() {
           )}
         </div>
       </div>
-
-      {markUndo && (
-        <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-3 py-2">
-          <p className="text-xs text-[var(--ink)]">
-            {markUndo.kind === 'delete'
-              ? `${markUndo.mark.page}페이지 단어 가림을 삭제했습니다.`
-              : '방금 만든 단어 가림을 되돌릴 수 있습니다.'}
-          </p>
-          <Button size="sm" variant="outline" onClick={() => void applyMarkUndo()}>
-            <Undo2 className="h-4 w-4" />
-            되돌리기
-          </Button>
-        </div>
-      )}
-
-      {mode === 'wordCover' && !selectedMark && pageMarks.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--border)] bg-[var(--surface)] px-3 py-2">
-          <span className="text-xs text-[var(--muted)]">
-            이 페이지 단어 가림 {pageMarks.length}개 — 탭해서 선택
-          </span>
-          <div className="flex flex-wrap gap-1">
-            {pageMarks.map((m, i) => (
-              <button
-                key={m.id}
-                type="button"
-                className="rounded-md border border-[var(--border-strong)] bg-[var(--bg)] px-2 py-1 text-xs font-medium"
-                onClick={() => setSelectedMarkId(m.id)}
-              >
-                #{i + 1}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {mode === 'wordCover' && !selectedMark && pageMarks.length === 0 && (
-        <p className="border-t border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--muted)]">
-          드래그해서 가림을 만드세요.
-        </p>
-      )}
-
-      {mode === 'pageCover' && (
-        <p className="border-t border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--muted)]">
-          숨긴 페이지는 학습·단어 가림에서 보이지 않습니다.
-        </p>
-      )}
     </div>
   )
 }
