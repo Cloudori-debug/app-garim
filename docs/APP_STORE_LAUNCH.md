@@ -57,14 +57,16 @@ Get-Content amginote-cert.key
 문구 원본은 `store/ios/metadata/ko/` 에도 있습니다.
 
 **스크린샷 (필수)**  
-`store/ios/screenshots/` PNG를 App Store Connect에 그대로 업로드합니다.
+캡션이 있는 소개 이미지를 올립니다.
 
 | 세트 | 크기 | 폴더 |
 |------|------|------|
-| 아이폰 6.9" | 1320 × 2868 | `store/ios/screenshots/iphone-6.9/` |
-| 아이패드 13" | 2064 × 2752 | `store/ios/screenshots/ipad-13/` |
+| 아이폰 6.9" | 1320 × 2868 | `store/ios/screenshots/listing/iphone-6.9/` |
+| 아이패드 13" | 2064 × 2752 | `store/ios/screenshots/listing/ipad-13/` |
 
-캡처 화면: 오늘 복습 · 복습 가림 · 서재 · PDF 가림 · 가림 허브
+원본 캡처는 `store/ios/screenshots/iphone-6.9/` · `ipad-13/` 입니다.  
+캡션 재생성: `node scripts/compose-store-captions.mjs`  
+카페·쇼츠 초안: `store/ios/marketing/`
 
 ### 앱 개인정보(App Privacy) 질문
 
@@ -99,17 +101,7 @@ Get-Content amginote-cert.key
 PDF 가리고 오늘 복습
 
 ### 설명
-```text
-가림 암기노트는 이미 가진 요약·기출·이론 PDF를 그대로 두고, 상자로 가린 뒤 다시 물어보는 로컬 암기 앱입니다.
-
-• PDF 서재 — 폴더로 정리
-• 단어·페이지 가림 — 손가락으로 상자 그리기
-• 오늘 복습 — 잊기 전에 다시 등장
-• 통계·테마·JSON 백업
-• 계정 없음 — 데이터는 이 기기에만 저장
-
-공시·자격·수험 자료처럼 “카드를 다시 만들기 싫은” 학습에 맞춰져 있습니다.
-```
+`store/ios/metadata/ko/description.txt` 내용을 그대로 붙여 넣습니다.
 
 ### 키워드 (쉼표 구분, 100자 제한에 맞춤)
 ```text
@@ -118,7 +110,7 @@ PDF 가리고 오늘 복습
 
 ### 홍보 텍스트 (170자, 선택)
 ```text
-내 PDF를 가리고 외우고, 오늘 할 복습만 모아 드립니다. 카드 제작 없이 바로 시작하세요.
+카드를 다시 치지 마세요. 가진 PDF를 가리고, 오늘 할 복습만 모아 드립니다.
 ```
 
 ---
