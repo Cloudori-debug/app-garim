@@ -33,6 +33,23 @@ workflows:
         script: |
           npm run build
           npx cap sync ios
+      - name: Verify App Store icon is in the project
+        script: |
+          ICON="$CM_BUILD_DIR/ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png"
+          test -f "$ICON"
+          python3 - "$ICON" <<'PY'
+          from pathlib import Path
+          import struct
+          import sys
+          p = Path(sys.argv[1])
+          data = p.read_bytes()
+          assert data[:8] == b"\x89PNG\r\n\x1a\n", "not a PNG"
+          w, h = struct.unpack(">II", data[16:24])
+          color_type = data[25]
+          print(f"app icon {w}x{h} colorType={color_type} bytes={len(data)}")
+          assert (w, h) == (1024, 1024), (w, h)
+          assert color_type == 2, f"App Store icon must be RGB without alpha, got colorType={color_type}"
+          PY
       - name: Set up keychain
         script: |
           keychain initialize

@@ -12,6 +12,8 @@
 	</array>
 	<key>CFBundleDisplayName</key>
         <string>가림 암기노트</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
