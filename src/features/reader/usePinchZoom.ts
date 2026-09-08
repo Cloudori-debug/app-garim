@@ -2,17 +2,20 @@ import { useEffect, useRef, type RefObject } from 'react'
 
 import { clampZoomPercent, snapZoomPercent } from '@/features/reader/zoomSteps'
 
-function dist2(
-  a: { clientX: number; clientY: number },
-  b: { clientX: number; clientY: number },
-): number {
+type Pt = { clientX: number; clientY: number }
+type TwoFingerLock = 'pan' | 'pinch'
+
+function dist2(a: Pt, b: Pt): number {
   return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
 }
 
+function centroid(a: Pt, b: Pt): Pt {
+  return { clientX: (a.clientX + b.clientX) / 2, clientY: (a.clientY + b.clientY) / 2 }
+}
+
 /**
- * PDF 스크롤 영역에서만 핀치 / Ctrl+휠로 확대.
- * 한 손가락 스크롤은 네이티브에 맡긴다.
- * (스크롤 컨테이너에 상시 non-passive touchmove를 붙이면 iOS에서 팬이 막힘)
+ * PDF 스크롤 영역: 한 손가락은 네이티브 스크롤, 두 손가락 이동은 팬,
+ * 두 손가락 간격 변화·Ctrl+휠은 확대.
  */
 export function usePinchZoom(
   targetRef: RefObject<HTMLElement | null>,
@@ -28,93 +31,140 @@ export function usePinchZoom(
     const el = targetRef.current
     if (!el) return
 
-    const pointers = new Map<number, { clientX: number; clientY: number }>()
-    let pinching = false
+    const pointers = new Map<number, Pt>()
+    let lock: TwoFingerLock | null = null
     let startDist = 0
     let startZoom = 100
+    let startCenter: Pt | null = null
+    let lastCenter: Pt | null = null
     let gestureStartZoom = 100
-    let pinchMoveBound = false
+    let twoFingerMoveBound = false
 
-    const syncPinchFromPointers = () => {
-      if (pointers.size < 2) return
+    const pair = (): [Pt, Pt] | null => {
+      if (pointers.size < 2) return null
       const [a, b] = [...pointers.values()]
-      if (!a || !b) return
-      const d = dist2(a, b)
-      if (startDist < 4) startDist = d
-      if (startDist < 4) return
-      setZoomPercent(clampZoomPercent(startZoom * (d / startDist)))
+      return a && b ? [a, b] : null
     }
 
-    const onPinchPointerMove = (e: PointerEvent) => {
+    const applyTwoFinger = () => {
+      const pts = pair()
+      if (!pts) return
+      const [a, b] = pts
+      const d = dist2(a, b)
+      const center = centroid(a, b)
+      if (!startCenter) {
+        startDist = d
+        startCenter = center
+        lastCenter = center
+        startZoom = zoomRef.current
+        return
+      }
+      if (startDist < 4) startDist = d
+
+      const dDist = Math.abs(d - startDist)
+      const dPan = Math.hypot(center.clientX - startCenter.clientX, center.clientY - startCenter.clientY)
+
+      if (!lock) {
+        if (dDist >= 18 && dDist >= dPan * 0.65) lock = 'pinch'
+        else if (dPan >= 12) lock = 'pan'
+      }
+
+      if (lock === 'pinch') {
+        if (startDist >= 4) setZoomPercent(clampZoomPercent(startZoom * (d / startDist)))
+      } else if (lock === 'pan' && lastCenter) {
+        el.scrollLeft -= center.clientX - lastCenter.clientX
+        el.scrollTop -= center.clientY - lastCenter.clientY
+      }
+      lastCenter = center
+    }
+
+    const onTwoFingerPointerMove = (e: PointerEvent) => {
       if (!pointers.has(e.pointerId)) return
       pointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY })
-      if (!pinching || pointers.size < 2) return
+      if (pointers.size < 2) return
       e.preventDefault()
-      syncPinchFromPointers()
+      applyTwoFinger()
     }
 
-    const onPinchTouchMove = (e: TouchEvent) => {
-      if (!pinching || e.touches.length !== 2) return
+    const onTwoFingerTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 2) return
       e.preventDefault()
-      const d = dist2(e.touches[0]!, e.touches[1]!)
-      if (startDist < 4) return
-      setZoomPercent(clampZoomPercent(startZoom * (d / startDist)))
+      pointers.clear()
+      pointers.set(0, { clientX: e.touches[0]!.clientX, clientY: e.touches[0]!.clientY })
+      pointers.set(1, { clientX: e.touches[1]!.clientX, clientY: e.touches[1]!.clientY })
+      applyTwoFinger()
     }
 
-    const bindPinchMove = () => {
-      if (pinchMoveBound) return
-      pinchMoveBound = true
+    const bindTwoFingerMove = () => {
+      if (twoFingerMoveBound) return
+      twoFingerMoveBound = true
       el.style.touchAction = 'none'
-      el.addEventListener('pointermove', onPinchPointerMove, { capture: true, passive: false })
-      el.addEventListener('touchmove', onPinchTouchMove, { capture: true, passive: false })
+      el.addEventListener('pointermove', onTwoFingerPointerMove, { capture: true, passive: false })
+      el.addEventListener('touchmove', onTwoFingerTouchMove, { capture: true, passive: false })
     }
 
-    const unbindPinchMove = () => {
-      if (!pinchMoveBound) return
-      pinchMoveBound = false
+    const unbindTwoFingerMove = () => {
+      if (!twoFingerMoveBound) return
+      twoFingerMoveBound = false
       el.style.touchAction = ''
-      el.removeEventListener('pointermove', onPinchPointerMove, { capture: true })
-      el.removeEventListener('touchmove', onPinchTouchMove, { capture: true })
+      el.removeEventListener('pointermove', onTwoFingerPointerMove, { capture: true })
+      el.removeEventListener('touchmove', onTwoFingerTouchMove, { capture: true })
+    }
+
+    const beginTwoFinger = () => {
+      const pts = pair()
+      lock = null
+      startDist = pts ? dist2(pts[0], pts[1]) : 0
+      startCenter = pts ? centroid(pts[0], pts[1]) : null
+      lastCenter = startCenter
+      startZoom = zoomRef.current
+      bindTwoFingerMove()
+    }
+
+    const endTwoFinger = () => {
+      const wasPinch = lock === 'pinch'
+      lock = null
+      startCenter = null
+      lastCenter = null
+      unbindTwoFingerMove()
+      if (wasPinch) setZoomPercent(snapZoomPercent(zoomRef.current))
     }
 
     const onPointerDown = (e: PointerEvent) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return
       pointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY })
-      if (pointers.size === 2) {
-        pinching = true
-        const [a, b] = [...pointers.values()]
-        startDist = a && b ? dist2(a, b) : 0
-        startZoom = zoomRef.current
-        bindPinchMove()
-      }
+      if (pointers.size === 2) beginTwoFinger()
     }
 
     const endPointer = (e: PointerEvent) => {
       pointers.delete(e.pointerId)
-      if (pointers.size < 2 && pinching) {
-        pinching = false
-        unbindPinchMove()
-        setZoomPercent(snapZoomPercent(zoomRef.current))
-      }
+      if (pointers.size < 2 && twoFingerMoveBound) endTwoFinger()
     }
 
     const onGestureStart = (e: Event) => {
       e.preventDefault()
       gestureStartZoom = zoomRef.current
-      pinching = true
     }
 
     const onGestureChange = (e: Event) => {
-      e.preventDefault()
+      if (lock === 'pan') {
+        e.preventDefault()
+        return
+      }
       const scale = (e as Event & { scale?: number }).scale ?? 1
+      if (lock !== 'pinch' && Math.abs(scale - 1) < 0.08) {
+        e.preventDefault()
+        return
+      }
+      lock = 'pinch'
+      e.preventDefault()
       setZoomPercent(clampZoomPercent(gestureStartZoom * scale))
     }
 
     const onGestureEnd = (e: Event) => {
       e.preventDefault()
-      pinching = false
-      unbindPinchMove()
-      setZoomPercent(snapZoomPercent(zoomRef.current))
+      if (lock === 'pinch') setZoomPercent(snapZoomPercent(zoomRef.current))
+      if (pointers.size < 2) endTwoFinger()
     }
 
     const onWheel = (e: WheelEvent) => {
@@ -132,18 +182,16 @@ export function usePinchZoom(
 
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 2) return
-      pinching = true
-      startDist = dist2(e.touches[0]!, e.touches[1]!)
-      startZoom = zoomRef.current
-      bindPinchMove()
+      pointers.clear()
+      pointers.set(0, { clientX: e.touches[0]!.clientX, clientY: e.touches[0]!.clientY })
+      pointers.set(1, { clientX: e.touches[1]!.clientX, clientY: e.touches[1]!.clientY })
+      beginTwoFinger()
     }
 
     const onTouchEnd = (e: TouchEvent) => {
       if (e.touches.length >= 2) return
-      if (!pinching) return
-      pinching = false
-      unbindPinchMove()
-      setZoomPercent(snapZoomPercent(zoomRef.current))
+      if (!twoFingerMoveBound) return
+      endTwoFinger()
     }
 
     const captureFalse: AddEventListenerOptions = { capture: true, passive: false }
@@ -154,7 +202,6 @@ export function usePinchZoom(
     el.addEventListener('pointercancel', endPointer)
     el.addEventListener('lostpointercapture', endPointer)
 
-    // touchstart는 passive 유지 — 상시 non-passive면 iOS 세로 스크롤이 막힘
     el.addEventListener('touchstart', onTouchStart, { capture: true, passive: true })
     el.addEventListener('touchend', onTouchEnd)
     el.addEventListener('touchcancel', onTouchEnd)
@@ -166,7 +213,7 @@ export function usePinchZoom(
     window.addEventListener('wheel', onWheel, captureFalse)
 
     return () => {
-      unbindPinchMove()
+      unbindTwoFingerMove()
       el.removeEventListener('pointerdown', onPointerDown)
       el.removeEventListener('pointerup', endPointer)
       el.removeEventListener('pointercancel', endPointer)

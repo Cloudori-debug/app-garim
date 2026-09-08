@@ -47,6 +47,8 @@ interface PdfViewerProps {
   onDeleteMark: (id: string) => void
   onToggleStudy: (id: string) => void
   onToggleFavorite: (id: string, isFavorite: boolean) => void
+  /** 단어 가림에서 빈 페이지 드래그로 새 상자를 만들지 여부 */
+  allowCreateMarks?: boolean
 }
 
 function PageBlock({
@@ -64,6 +66,7 @@ function PageBlock({
   onToggleFavorite,
   onMeasured,
   devicePixelRatio,
+  allowCreateMarks,
 }: {
   pageNumber: number
   scale: number
@@ -79,6 +82,7 @@ function PageBlock({
   onToggleFavorite: (id: string, isFavorite: boolean) => void
   onMeasured?: (pageNumber: number, width: number, height: number) => void
   devicePixelRatio?: number
+  allowCreateMarks?: boolean
 }) {
   const [pageSize, setPageSize] = useState({ width: 0, height: 0 })
   const z = zoomFactor > 0 ? zoomFactor : 1
@@ -135,6 +139,7 @@ function PageBlock({
               pageWidth={pageSize.width}
               pageHeight={pageSize.height}
               mode={mode}
+              allowCreate={allowCreateMarks}
               selectedMarkId={selectedMarkId}
               onSelectMark={onSelectMark}
               onCreate={(rect) => onCreateMark(pageNumber, rect)}
@@ -174,6 +179,7 @@ export function PdfViewer({
   onToggleFavorite,
   onPdfJsDocument,
   devicePixelRatio,
+  allowCreateMarks = true,
 }: PdfViewerProps) {
   const file = useMemo(() => ({ url: fileUrl }), [fileUrl])
   const [docPages, setDocPages] = useState(pageCount)
@@ -284,6 +290,7 @@ export function PdfViewer({
     onToggleFavorite,
     onMeasured,
     devicePixelRatio,
+    allowCreateMarks,
   }
 
   return (

@@ -40,6 +40,8 @@ interface MarkBoxProps {
   onMoveStart: (e: React.PointerEvent) => void
   onResizeStart: (e: React.PointerEvent, handle: ResizeHandle) => void
   onToggleStudy: () => void
+  /** false면 터치가 페이지 스크롤로 통과 */
+  pointerActive?: boolean
 }
 
 export function MarkBox({
@@ -52,9 +54,10 @@ export function MarkBox({
   onMoveStart,
   onResizeStart,
   onToggleStudy,
+  pointerActive = true,
 }: MarkBoxProps) {
   const { left, top, width, height } = denormalizeRect(mark, pageWidth, pageHeight)
-  const editable = mode === 'wordCover'
+  const editable = mode === 'wordCover' && pointerActive
   const studyMode = mode === 'study'
 
   const hitW = Math.max(width, MIN_HIT)
@@ -114,7 +117,7 @@ export function MarkBox({
               ? 'border-2 border-neutral-950 bg-[#111111]'
               : VISIBLE_COLOR[mark.color]
             : EDIT_COLOR[mark.color],
-          selected && editable && 'ring-2 ring-[var(--accent)] ring-offset-1',
+          selected && mode === 'wordCover' && 'ring-2 ring-[var(--accent)] ring-offset-1',
         )}
         style={
           editable

@@ -7,7 +7,9 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
+  Hand,
   PanelLeft,
+  Pencil,
   RectangleHorizontal,
   Star,
   Trash2,
@@ -76,6 +78,7 @@ export function ReaderPage() {
   const [scale, setScale] = useState(1.1)
   const [zoomPercent, setZoomPercent] = useState(100)
   const [mode, setMode] = useState<ReaderMode>('study')
+  const [coverTool, setCoverTool] = useState<'draw' | 'pan'>('draw')
   const [color, setColor] = useState<MarkColor>('yellow')
   const [selectedMarkId, setSelectedMarkId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -597,6 +600,26 @@ export function ReaderPage() {
           <span className="shrink-0 text-[10px] font-semibold tracking-wide text-[var(--accent)]">
             편집
           </span>
+          <SegmentedGroup>
+            <Button
+              size="sm"
+              variant={coverTool === 'draw' ? 'default' : 'ghost'}
+              title="끌어서 가림 상자 만들기"
+              onClick={() => setCoverTool('draw')}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              가리기
+            </Button>
+            <Button
+              size="sm"
+              variant={coverTool === 'pan' ? 'default' : 'ghost'}
+              title="한 손가락으로 페이지 이동"
+              onClick={() => setCoverTool('pan')}
+            >
+              <Hand className="h-3.5 w-3.5" />
+              스크롤
+            </Button>
+          </SegmentedGroup>
           <UndoRedoButtons
             canUndo={canUndo}
             canRedo={canRedo}
@@ -697,7 +720,11 @@ export function ReaderPage() {
               ))}
             </div>
           ) : (
-            <p className="text-[11px] text-[var(--muted)]">드래그해서 가림을 만드세요</p>
+            <p className="text-[11px] text-[var(--muted)]">
+              {coverTool === 'draw'
+                ? '끌어서 가림 · 두 손가락으로 페이지 이동'
+                : '한 손가락으로 페이지 이동 · 가리기로 상자 그리기'}
+            </p>
           )}
         </div>
       )}
@@ -814,6 +841,7 @@ export function ReaderPage() {
                 zoomFactor={zoomPercent / 100}
                 mode={mode}
                 continuousScroll
+                allowCreateMarks={coverTool === 'draw'}
                 renderRadius={heavyPdf ? 1 : 2}
                 scrollRootRef={viewerPaneRef}
                 marks={marksApi.marks}

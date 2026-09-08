@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { Mark } from '@/entities/mark/types'
 import { MarkBox } from '@/features/reader/MarkBox'
@@ -18,6 +18,8 @@ interface MarkOverlayProps {
   pageWidth: number
   pageHeight: number
   mode: ReaderMode
+  /** false면 빈 페이지 드래그는 스크롤에 맡기고, 기존 가림만 만질 수 있음 */
+  allowCreate?: boolean
   selectedMarkId: string | null
   onSelectMark: (id: string | null) => void
   onCreate: (rect: { x: number; y: number; w: number; h: number }) => void
@@ -51,6 +53,7 @@ export function MarkOverlay({
   pageWidth,
   pageHeight,
   mode,
+  allowCreate = true,
   selectedMarkId,
   onSelectMark,
   onCreate,
@@ -63,7 +66,25 @@ export function MarkOverlay({
   void _onToggleFavorite
   const overlayRef = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
+  const drawing = mode === 'wordCover' && allowCreate
   const pageMarks = marks.filter((m) => m.page === page)
+
+  useEffect(() => {
+    if (drag?.type !== 'create') return
+    const cancelCreate = (e: PointerEvent) => {
+      if (e.isPrimary) return
+      setDrag(null)
+      const el = overlayRef.current
+      if (!el) return
+      try {
+        el.releasePointerCapture(e.pointerId)
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener('pointerdown', cancelCreate)
+    return () => window.removeEventListener('pointerdown', cancelCreate)
+  }, [drag?.type])
 
   const getNorm = (clientX: number, clientY: number) => {
     const el = overlayRef.current
@@ -81,17 +102,15 @@ export function MarkOverlay({
   return (
     <div
       ref={overlayRef}
-      className={
-        mode === 'study' || mode === 'pageCover'
-          ? 'absolute inset-0 pointer-events-none'
-          : 'absolute inset-0 touch-none'
-      }
+      className={drawing ? 'absolute inset-0 touch-none' : 'absolute inset-0 pointer-events-none'}
       style={{ width: pageWidth, height: pageHeight }}
       onPointerDown={(e) => {
-        if (mode !== 'wordCover') return
+        if (!drawing) return
         if (e.button !== 0) return
-        // 두 번째 손가락(핀치)은 가림 그리기 시작하지 않음
-        if (!e.isPrimary) return
+        if (!e.isPrimary) {
+          setDrag(null)
+          return
+        }
         if (e.target !== overlayRef.current) return
         const start = getNorm(e.clientX, e.clientY)
         onSelectMark(null)
@@ -162,6 +181,7 @@ export function MarkOverlay({
             overlayRef.current?.setPointerCapture(ev.pointerId)
           }}
           onToggleStudy={() => onToggleStudy(mark.id)}
+          pointerActive={drawing}
         />
       ))}
 
