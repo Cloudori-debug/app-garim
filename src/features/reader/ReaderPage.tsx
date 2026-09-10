@@ -26,6 +26,7 @@ import type { Document } from '@/entities/document/types'
 import type { MarkColor } from '@/entities/mark/types'
 import { clampFitScale } from '@/features/reader/fitScale'
 import { PdfViewer } from '@/features/reader/PdfViewer'
+import { CoverPageNav } from '@/features/reader/CoverPageNav'
 import { PageThumbnailRail } from '@/features/reader/PageThumbnailRail'
 import { isHeavyPdf } from '@/features/reader/pdfBudget'
 import { revokeThumbs, setThumbConcurrency } from '@/features/reader/pageThumbCache'
@@ -88,6 +89,7 @@ export function ReaderPage() {
   const [railOpen, setRailOpen] = useState(false)
   const [pdfJsDoc, setPdfJsDoc] = useState<PDFDocumentProxy | null>(null)
   const [fileBytes, setFileBytes] = useState(0)
+  const [lastCoverPage, setLastCoverPage] = useState<number | null>(null)
   const {
     canUndo,
     canRedo,
@@ -134,6 +136,15 @@ export function ReaderPage() {
     () => marksApi.marks.filter((m) => m.page === page).sort((a, b) => a.y - b.y || a.x - b.x),
     [marksApi.marks, page],
   )
+
+  const markedPages = useMemo(() => {
+    const items = Object.entries(markCounts)
+      .map(([p, count]) => ({ page: Number(p), count }))
+      .filter((item) => item.count > 0)
+      .sort((a, b) => a.page - b.page)
+    if (filterHidden) return items.filter((item) => visiblePages.includes(item.page))
+    return items
+  }, [markCounts, filterHidden, visiblePages])
 
   const pageIsHidden = hiddenPages.includes(page)
 
@@ -193,6 +204,10 @@ export function ReaderPage() {
   }, [page])
 
   useEffect(() => {
+    if (pageMarks.length > 0) setLastCoverPage(page)
+  }, [page, pageMarks.length])
+
+  useEffect(() => {
     if (!documentId) return
     void pageFavoriteRepo.isPageFavorite(documentId, page).then(setPageBookmarked)
   }, [documentId, page])
@@ -225,6 +240,7 @@ export function ReaderPage() {
   useEffect(() => {
     setRailOpen(false)
     setPdfJsDoc(null)
+    setLastCoverPage(null)
   }, [documentId, fileUrl])
 
   const heavyPdf = isHeavyPdf(fileBytes, pageCount)
@@ -679,30 +695,7 @@ export function ReaderPage() {
             </ToolCluster>
           ) : null}
           {pageMarks.length > 0 ? (
-            <ToolCluster>
-              <Button
-                size="sm"
-                variant="ghost"
-                title="이 페이지 가림 전부 열기"
-                onClick={() => void marksApi.setHiddenBulk(false, page)}
-              >
-                <Eye className="h-4 w-4" />
-                <span className="hidden sm:inline">전부 열기</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                title="이 페이지 가림 전부 가리기"
-                onClick={() => void marksApi.setHiddenBulk(true, page)}
-              >
-                <EyeOff className="h-4 w-4" />
-                <span className="hidden sm:inline">전부 가리기</span>
-              </Button>
-            </ToolCluster>
-          ) : null}
-          {pageMarks.length > 0 ? (
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-              <span className="text-[11px] text-[var(--muted)]">이 페이지 {pageMarks.length}개</span>
+            <div className="flex min-w-0 flex-wrap items-center gap-1">
               {pageMarks.map((m, i) => (
                 <button
                   key={m.id}
@@ -759,31 +752,36 @@ export function ReaderPage() {
         </div>
       )}
 
-      {mode === 'study' && pageMarks.length > 0 && (
+      {(mode === 'study' || mode === 'wordCover') && markedPages.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border)] bg-[var(--surface)] px-3 py-1.5">
-          <span className="shrink-0 text-[10px] font-semibold tracking-wide text-[var(--muted)]">
-            이 페이지
-          </span>
-          <ToolCluster>
-            <Button
-              size="sm"
-              variant="ghost"
-              title="이 페이지 가림 전부 열기"
-              onClick={() => void marksApi.setHiddenBulk(false, page)}
-            >
-              <Eye className="h-4 w-4" />
-              <span className="hidden sm:inline">전부 열기</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              title="이 페이지 가림 전부 가리기"
-              onClick={() => void marksApi.setHiddenBulk(true, page)}
-            >
-              <EyeOff className="h-4 w-4" />
-              <span className="hidden sm:inline">전부 가리기</span>
-            </Button>
-          </ToolCluster>
+          <CoverPageNav
+            pages={markedPages}
+            currentPage={page}
+            lastCoverPage={lastCoverPage}
+            onGo={goToPage}
+          />
+          {pageMarks.length > 0 ? (
+            <ToolCluster>
+              <Button
+                size="sm"
+                variant="ghost"
+                title="이 페이지 가림 전부 열기"
+                onClick={() => void marksApi.setHiddenBulk(false, page)}
+              >
+                <Eye className="h-4 w-4" />
+                <span className="hidden sm:inline">전부 열기</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                title="이 페이지 가림 전부 가리기"
+                onClick={() => void marksApi.setHiddenBulk(true, page)}
+              >
+                <EyeOff className="h-4 w-4" />
+                <span className="hidden sm:inline">전부 가리기</span>
+              </Button>
+            </ToolCluster>
+          ) : null}
         </div>
       )}
 
