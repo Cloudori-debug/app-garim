@@ -10,7 +10,7 @@
 | Bundle / Application ID | `com.clowood.amginote` |
 | 개인정보처리방침 | https://app-garim.pages.dev/privacy.html |
 | 지원 URL | https://app-garim.pages.dev/support.html |
-| 문의 | clowood.cy@gmail.com |
+| 문의 | clowood.dev@gmail.com |
 
 ---
 
@@ -30,7 +30,7 @@
 
 1. https://appstoreconnect.apple.com/apps/6797558440/testflight/test-info  
 2. **Beta App Information**
-   - Feedback Email: `clowood.cy@gmail.com` (또는 본인 메일)
+   - Feedback Email: `clowood.dev@gmail.com`
 3. **Beta App Review Information**
    - First Name / Last Name / Phone / Email  
 4. 저장 후 Codemagic **iOS TestFlight** 다시 빌드하거나, ASC에서 해당 빌드로 테스터 배포

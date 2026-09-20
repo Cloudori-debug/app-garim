@@ -16,7 +16,7 @@ const frames = [
   {
     src: '01-today.png',
     out: '01-today.png',
-    title: '카드를 다시 치지 마세요',
+    title: '가진 PDF로 바로 외우세요',
     sub: '오늘 복습할 가림만 모입니다',
   },
   {
@@ -55,6 +55,16 @@ const devices = [
     subSize: 28,
     srcDir: join(root, 'store/ios/screenshots/iphone-6.9'),
     outDir: join(root, 'store/ios/screenshots/listing/iphone-6.9'),
+  },
+  {
+    name: 'iphone-6.5',
+    width: 1284,
+    height: 2778,
+    captionH: 500,
+    titleSize: 52,
+    subSize: 26,
+    srcDir: join(root, 'store/ios/screenshots/iphone-6.9'),
+    outDir: join(root, 'store/ios/screenshots/listing/iphone-6.5'),
   },
   {
     name: 'ipad-13',

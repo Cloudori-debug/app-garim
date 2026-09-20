@@ -4,13 +4,10 @@ import { ChevronRight } from 'lucide-react'
 
 import { useTheme } from '@/app/ThemeProvider'
 import * as backupRepo from '@/entities/backup/repository'
-import { APP_VERSION, PRIVACY_URL, SUPPORT_URL } from '@/shared/lib/appMeta'
+import { APP_VERSION, PRIVACY_URL, SUPPORT_EMAIL, SUPPORT_URL } from '@/shared/lib/appMeta'
 import { isNativeApp } from '@/shared/lib/platform'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/lib/cn'
-
-/** 의견·문의 수신 메일 (출시용) */
-const FEEDBACK_EMAIL = 'clowood.cy@gmail.com'
 
 const ACCENT_DOT: Record<string, string> = {
   default: '#0F766E',
@@ -79,7 +76,7 @@ export function MorePage() {
     setFeedbackHint(null)
     const subject = encodeURIComponent('가림 암기노트 의견')
     const body = encodeURIComponent(text)
-    window.location.href = `mailto:${FEEDBACK_EMAIL}?subject=${subject}&body=${body}`
+    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`
   }
 
   return (

@@ -59,10 +59,13 @@ Get-Content amginote-cert.key
 **스크린샷 (필수)**  
 캡션이 있는 소개 이미지를 올립니다.
 
-| 세트 | 크기 | 폴더 |
+| 올릴 곳 (ASC 표시) | 크기 | 폴더 |
 |------|------|------|
-| 아이폰 6.9" | 1320 × 2868 | `store/ios/screenshots/listing/iphone-6.9/` |
-| 아이패드 13" | 2064 × 2752 | `store/ios/screenshots/listing/ipad-13/` |
+| iPhone **6.9인치** | 1320 × 2868 | `store/ios/screenshots/listing/iphone-6.9/` |
+| iPhone **6.5인치** (6.9 슬롯이 없거나 거절되면) | 1284 × 2778 | `store/ios/screenshots/listing/iphone-6.5/` |
+| iPad **13인치** | 2064 × 2752 | `store/ios/screenshots/listing/ipad-13/` |
+
+6.9용 PNG를 6.5 칸에 넣으면 `1242 × 2688` / `1284 × 2778` 오류가 납니다. 칸 이름을 먼저 확인하세요.
 
 원본 캡처는 `store/ios/screenshots/iphone-6.9/` · `ipad-13/` 입니다.  
 캡션 재생성: `node scripts/compose-store-captions.mjs`  
@@ -110,7 +113,7 @@ PDF 가리고 오늘 복습
 
 ### 홍보 텍스트 (170자, 선택)
 ```text
-카드를 다시 치지 마세요. 가진 PDF를 가리고, 오늘 할 복습만 모아 드립니다.
+가진 PDF를 가리고, 오늘 할 복습만 모아 드립니다.
 ```
 
 ---
