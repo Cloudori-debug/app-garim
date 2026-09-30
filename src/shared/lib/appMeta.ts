@@ -1,4 +1,4 @@
-export const APP_VERSION = '1.4.0'
+export const APP_VERSION = '1.4.1'
 export const APP_NAME = '가림 암기노트'
 export const SUPPORT_EMAIL = 'clowood.dev@gmail.com'
 export const PRIVACY_URL = 'https://app-garim.pages.dev/privacy.html'

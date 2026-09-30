@@ -1,9 +1,18 @@
 import { db } from '@/entities/db'
-import type { Mark, MarkColor } from '@/entities/mark/types'
+import type { Mark, MarkColor, MarkPoint } from '@/entities/mark/types'
 import * as reviewRepo from '@/entities/review/repository'
 import type { ReviewState } from '@/entities/review/types'
-import { clampNormRect, isValidMarkSize } from '@/shared/lib/geometry'
+import { isValidStroke, strokeBounds } from '@/shared/lib/stroke'
 import { createId, nowIso } from '@/shared/lib/id'
+
+export type MarkGeometry = {
+  x: number
+  y: number
+  w: number
+  h: number
+  points: MarkPoint[]
+  strokeWidth: number
+}
 
 export async function listAllMarks(): Promise<Mark[]> {
   return db.marks.orderBy('updatedAt').reverse().toArray()
@@ -24,20 +33,20 @@ export async function getMark(id: string): Promise<Mark | undefined> {
 export async function createMark(params: {
   documentId: string
   page: number
-  x: number
-  y: number
-  w: number
-  h: number
   color: MarkColor
+  points: MarkPoint[]
+  strokeWidth: number
 }): Promise<Mark | null> {
-  const rect = clampNormRect(params.x, params.y, params.w, params.h)
-  if (!isValidMarkSize(rect.w, rect.h)) return null
+  if (!isValidStroke(params.points)) return null
+  const box = strokeBounds(params.points, params.strokeWidth)
   const now = nowIso()
   const mark: Mark = {
     id: createId(),
     documentId: params.documentId,
     page: params.page,
-    ...rect,
+    ...box,
+    points: params.points,
+    strokeWidth: params.strokeWidth,
     color: params.color,
     hiddenInStudy: true,
     isFavorite: false,
@@ -51,12 +60,14 @@ export async function createMark(params: {
   return mark
 }
 
-export async function updateMarkGeometry(
-  id: string,
-  rect: { x: number; y: number; w: number; h: number },
-): Promise<void> {
-  const clamped = clampNormRect(rect.x, rect.y, rect.w, rect.h)
-  await db.marks.update(id, { ...clamped, updatedAt: nowIso() })
+export async function updateMarkGeometry(id: string, geo: MarkGeometry): Promise<void> {
+  const box = strokeBounds(geo.points, geo.strokeWidth)
+  await db.marks.update(id, {
+    ...box,
+    points: geo.points,
+    strokeWidth: geo.strokeWidth,
+    updatedAt: nowIso(),
+  })
 }
 
 export async function deleteMark(id: string): Promise<void> {

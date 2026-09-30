@@ -32,7 +32,7 @@ import { isHeavyPdf } from '@/features/reader/pdfBudget'
 import { revokeThumbs, setThumbConcurrency } from '@/features/reader/pageThumbCache'
 import type { ReaderMode } from '@/features/reader/types'
 import type { MarkHistoryOp } from '@/features/reader/markHistory'
-import { rectsEqual } from '@/features/reader/markHistory'
+import { geometriesEqual } from '@/features/reader/markHistory'
 import { useMarks } from '@/features/reader/useMarks'
 import { useOpHistory } from '@/features/reader/useOpHistory'
 import {
@@ -47,6 +47,13 @@ import { Button } from '@/shared/ui/button'
 import { SegmentedGroup, ToolCluster } from '@/shared/ui/tool-cluster'
 import { UndoRedoButtons } from '@/shared/ui/undo-redo'
 import { cn } from '@/shared/lib/cn'
+import {
+  DEFAULT_STROKE_WIDTH,
+  STROKE_PRESETS,
+  geometryFromStroke,
+  markStroke,
+  nearestStrokePreset,
+} from '@/shared/lib/stroke'
 import {
   adjacentVisiblePage,
   listVisiblePages,
@@ -81,6 +88,7 @@ export function ReaderPage() {
   const [mode, setMode] = useState<ReaderMode>('study')
   const [coverTool, setCoverTool] = useState<'draw' | 'pan'>('draw')
   const [color, setColor] = useState<MarkColor>('yellow')
+  const [strokeWidth, setStrokeWidth] = useState<number>(DEFAULT_STROKE_WIDTH)
   const [selectedMarkId, setSelectedMarkId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pageBookmarked, setPageBookmarked] = useState(false)
@@ -388,6 +396,17 @@ export function ReaderPage() {
     recordOp({ kind: 'delete', mark, review })
   }
 
+  const applyHighlighterWidth = (next: number) => {
+    setStrokeWidth(next)
+    if (!selectedMark) return
+    const stroke = markStroke(selectedMark)
+    if (Math.abs(stroke.strokeWidth - next) < 0.0001) return
+    const before = geometryFromStroke(stroke.points, stroke.strokeWidth)
+    const after = geometryFromStroke(stroke.points, next)
+    void marksApi.updateGeometry(selectedMark.id, after)
+    recordOp({ kind: 'geometry', id: selectedMark.id, before, after })
+  }
+
   const undoMarkRef = useRef(undoMark)
   undoMarkRef.current = undoMark
   const redoMarkRef = useRef(redoMark)
@@ -620,7 +639,7 @@ export function ReaderPage() {
             <Button
               size="sm"
               variant={coverTool === 'draw' ? 'default' : 'ghost'}
-              title="끌어서 가림 상자 만들기"
+              title="형광펜으로 줄을 그어 가림 만들기"
               onClick={() => setCoverTool('draw')}
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -676,6 +695,33 @@ export function ReaderPage() {
               />
             ))}
           </ToolCluster>
+          <ToolCluster label="굵기">
+            {STROKE_PRESETS.map((preset) => {
+              const current = selectedMark
+                ? nearestStrokePreset(markStroke(selectedMark).strokeWidth).width
+                : nearestStrokePreset(strokeWidth).width
+              const on = current === preset.width
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  title={selectedMark ? `선택 가림 굵기 · ${preset.label}` : `형광펜 굵기 · ${preset.label}`}
+                  className={cn(
+                    'flex h-8 w-9 items-center justify-center rounded-md',
+                    on ? 'bg-[var(--surface)] shadow-sm' : 'hover:bg-[var(--border)]/70',
+                  )}
+                  onClick={() => applyHighlighterWidth(preset.width)}
+                >
+                  <span
+                    className="w-5 rounded-full bg-yellow-400"
+                    style={{ height: Math.max(3, preset.width * 160) }}
+                    aria-hidden
+                  />
+                  <span className="sr-only">{preset.label}</span>
+                </button>
+              )
+            })}
+          </ToolCluster>
           {selectedMark && selectedMark.page === page ? (
             <ToolCluster>
               <span className="hidden px-1.5 text-[11px] font-medium text-[var(--muted)] sm:inline">
@@ -715,8 +761,8 @@ export function ReaderPage() {
           ) : (
             <p className="text-[11px] text-[var(--muted)]">
               {coverTool === 'draw'
-                ? '끌어서 가림 · 두 손가락으로 페이지 이동'
-                : '한 손가락으로 페이지 이동 · 가리기로 상자 그리기'}
+                ? '형광펜으로 줄을 그으세요 · 두 손가락으로 페이지 이동'
+                : '한 손가락으로 페이지 이동 · 가리기로 형광펜 긋기'}
             </p>
           )}
         </div>
@@ -855,21 +901,26 @@ export function ReaderPage() {
                 onBasePageSize={(size) => {
                   if (!fitReady) applyFitFromBaseSize(size)
                 }}
-                onCreateMark={(markPage, rect) => {
-                  void marksApi.create({ page: markPage, color, ...rect }).then((mark) => {
+                highlighterColor={color}
+                highlighterWidth={strokeWidth}
+                onCreateMark={(markPage, stroke) => {
+                  void marksApi.create({ page: markPage, color, ...stroke }).then((mark) => {
                     if (mark) {
                       setSelectedMarkId(mark.id)
                       recordOp({ kind: 'create', mark })
                     }
                   })
                 }}
-                onUpdateGeometry={(id, rect) => {
+                onUpdateGeometry={(id, geo) => {
                   const mark = marksApi.marks.find((m) => m.id === id)
                   if (!mark) return
-                  const before = { x: mark.x, y: mark.y, w: mark.w, h: mark.h }
-                  if (rectsEqual(before, rect)) return
-                  void marksApi.updateGeometry(id, rect)
-                  recordOp({ kind: 'geometry', id, before, after: rect })
+                  const before = geometryFromStroke(
+                    markStroke(mark).points,
+                    markStroke(mark).strokeWidth,
+                  )
+                  if (geometriesEqual(before, geo)) return
+                  void marksApi.updateGeometry(id, geo)
+                  recordOp({ kind: 'geometry', id, before, after: geo })
                 }}
                 onDeleteMark={(id) => {
                   void deleteMarkWithUndo(id)

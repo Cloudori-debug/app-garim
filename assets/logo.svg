@@ -1,10 +1,32 @@
 ﻿<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
-  <rect width="1024" height="1024" rx="224" fill="#0F766E"/>
-  <rect x="196" y="160" width="632" height="704" rx="48" fill="#F8FAF9"/>
-  <rect x="260" y="248" width="400" height="36" rx="18" fill="#0F766E" opacity="0.22"/>
-  <rect x="260" y="320" width="504" height="36" rx="18" fill="#0F766E" opacity="0.14"/>
-  <rect x="260" y="392" width="360" height="36" rx="18" fill="#0F766E" opacity="0.14"/>
-  <rect x="300" y="480" width="280" height="88" rx="16" fill="#0F766E"/>
-  <rect x="260" y="620" width="440" height="36" rx="18" fill="#0F766E" opacity="0.14"/>
-  <rect x="260" y="692" width="300" height="36" rx="18" fill="#0F766E" opacity="0.14"/>
+  <defs>
+    <linearGradient id="bg" x1="180" y1="0" x2="844" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7EE0D2"/>
+      <stop offset="0.45" stop-color="#2BB5A6"/>
+      <stop offset="1" stop-color="#0E6E68"/>
+    </linearGradient>
+    <linearGradient id="page" x1="512" y1="168" x2="512" y2="856" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8EE"/>
+      <stop offset="1" stop-color="#F3E6D4"/>
+    </linearGradient>
+    <linearGradient id="peach" x1="260" y1="480" x2="760" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8B7A6"/>
+      <stop offset="1" stop-color="#E8927C"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="700" y1="250" x2="760" y2="310" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6E27A"/>
+      <stop offset="1" stop-color="#D4A017"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect x="214" y="196" width="612" height="656" rx="128" fill="#0A4F4A" opacity="0.22"/>
+  <rect x="198" y="188" width="612" height="640" rx="120" fill="#EFE0CC"/>
+  <rect x="186" y="168" width="612" height="640" rx="120" fill="url(#page)"/>
+  <path d="M668 168c28 0 72 8 96 40 8 12 12 22 12 34v118c0 18-22 28-36 16-22-18-40-40-72-52-28-10-56-8-80-4 8-48 16-100 16-140 0-8 4-12 12-12h52Z" fill="#F4A090"/>
+  <path d="M700 168c18 4 52 18 64 48v96c-18-14-36-30-62-42-18-8-40-10-58-8 6-32 12-70 14-94 2-4 6-4 10-4h32Z" fill="#F8C2B4" opacity="0.7"/>
+  <rect x="248" y="300" width="360" height="52" rx="26" fill="#8FCBB8"/>
+  <rect x="248" y="384" width="248" height="52" rx="26" fill="#9ED4C4"/>
+  <rect x="248" y="468" width="488" height="88" rx="36" fill="url(#peach)"/>
+  <rect x="248" y="588" width="400" height="52" rx="26" fill="#6DBBB0"/>
+  <path d="M728 268l18 46 50 8-40 32 12 48-40-24-40 24 12-48-40-32 50-8 18-46Z" fill="url(#gold)"/>
 </svg>

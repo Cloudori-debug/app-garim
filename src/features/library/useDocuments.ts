@@ -72,5 +72,13 @@ export function useDocuments(folderId: string | null) {
     [refresh],
   )
 
-  return { documents, loading, refresh, addPdf, remove, toggleFavorite, move }
+  const rename = useCallback(
+    async (id: string, fileName: string) => {
+      await documentRepo.renameDocument(id, fileName)
+      await refresh()
+    },
+    [refresh],
+  )
+
+  return { documents, loading, refresh, addPdf, remove, toggleFavorite, move, rename }
 }

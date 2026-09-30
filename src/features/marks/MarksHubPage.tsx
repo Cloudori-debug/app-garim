@@ -17,6 +17,7 @@ import { Button } from '@/shared/ui/button'
 import { SegmentedGroup } from '@/shared/ui/tool-cluster'
 import { UndoRedoButtons } from '@/shared/ui/undo-redo'
 import { cn } from '@/shared/lib/cn'
+import { markStroke, pointsToPath } from '@/shared/lib/stroke'
 
 type HubTab = 'favorites' | 'wordCovers' | 'pageCovers'
 
@@ -338,7 +339,7 @@ function WordCoversPanel({
         <EyeOff className="mx-auto h-8 w-8 text-[var(--muted)]" />
         <p className="mt-3 text-sm font-medium text-[var(--ink)]">아직 단어 가림이 없습니다</p>
         <p className="mt-1 text-xs text-[var(--muted)]">
-          리더 → <strong>단어 가림</strong> 모드에서 드래그로 만들면 여기에 모입니다.
+          리더 → <strong>단어 가림</strong>에서 형광펜으로 줄을 그으면 여기에 모입니다.
         </p>
       </div>
     )
@@ -470,20 +471,28 @@ function PageCoversPanel({
 }
 
 function MarkRectOverlay({ mark }: { mark: Mark }) {
+  const { points, strokeWidth } = markStroke(mark)
+  const d = pointsToPath(points, 1, 1)
+  const ink =
+    mark.color === 'yellow'
+      ? 'rgba(250, 204, 21, 0.55)'
+      : mark.color === 'red'
+        ? 'rgba(248, 113, 113, 0.5)'
+        : 'rgba(192, 132, 252, 0.5)'
   return (
-    <span
-      className={cn(
-        'pointer-events-none absolute box-border border-2',
-        mark.color === 'yellow' && 'border-yellow-500 bg-yellow-300/50',
-        mark.color === 'red' && 'border-red-500 bg-red-300/50',
-        mark.color === 'purple' && 'border-purple-500 bg-purple-300/50',
-      )}
-      style={{
-        left: `${mark.x * 100}%`,
-        top: `${mark.y * 100}%`,
-        width: `${mark.w * 100}%`,
-        height: `${mark.h * 100}%`,
-      }}
-    />
+    <svg
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      viewBox="0 0 1 1"
+      preserveAspectRatio="none"
+    >
+      <path
+        d={d}
+        fill="none"
+        stroke={ink}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }

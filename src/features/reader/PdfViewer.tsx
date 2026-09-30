@@ -3,9 +3,11 @@ import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { Document as PdfDocument, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 
-import type { Mark } from '@/entities/mark/types'
+import type { MarkGeometry } from '@/entities/mark/repository'
+import type { Mark, MarkColor } from '@/entities/mark/types'
 import { MarkOverlay } from '@/features/reader/MarkOverlay'
 import type { ReaderMode } from '@/features/reader/types'
+import { DEFAULT_STROKE_WIDTH } from '@/shared/lib/stroke'
 import '@/shared/lib/setupPdfWorker'
 import { PDFJS_DOC_OPTIONS } from '@/shared/lib/setupPdfWorker'
 
@@ -42,13 +44,18 @@ interface PdfViewerProps {
   onPdfJsDocument?: (doc: PDFDocumentProxy | null) => void
   /** 레티나 캔버스 상한. 대용량 스캔본은 1 */
   devicePixelRatio?: number
-  onCreateMark: (page: number, rect: { x: number; y: number; w: number; h: number }) => void
-  onUpdateGeometry: (id: string, rect: { x: number; y: number; w: number; h: number }) => void
+  onCreateMark: (
+    page: number,
+    stroke: { points: { x: number; y: number }[]; strokeWidth: number },
+  ) => void
+  onUpdateGeometry: (id: string, geo: MarkGeometry) => void
   onDeleteMark: (id: string) => void
   onToggleStudy: (id: string) => void
   onToggleFavorite: (id: string, isFavorite: boolean) => void
-  /** 단어 가림에서 빈 페이지 드래그로 새 상자를 만들지 여부 */
+  /** 단어 가림에서 빈 페이지 드래그로 새 가림을 만들지 여부 */
   allowCreateMarks?: boolean
+  highlighterColor?: MarkColor
+  highlighterWidth?: number
 }
 
 function PageBlock({
@@ -67,6 +74,8 @@ function PageBlock({
   onMeasured,
   devicePixelRatio,
   allowCreateMarks,
+  highlighterColor = 'yellow',
+  highlighterWidth = DEFAULT_STROKE_WIDTH,
 }: {
   pageNumber: number
   scale: number
@@ -75,14 +84,19 @@ function PageBlock({
   marks: Mark[]
   selectedMarkId: string | null
   onSelectMark: (id: string | null) => void
-  onCreateMark: (page: number, rect: { x: number; y: number; w: number; h: number }) => void
-  onUpdateGeometry: (id: string, rect: { x: number; y: number; w: number; h: number }) => void
+  onCreateMark: (
+    page: number,
+    stroke: { points: { x: number; y: number }[]; strokeWidth: number },
+  ) => void
+  onUpdateGeometry: (id: string, geo: MarkGeometry) => void
   onDeleteMark: (id: string) => void
   onToggleStudy: (id: string) => void
   onToggleFavorite: (id: string, isFavorite: boolean) => void
   onMeasured?: (pageNumber: number, width: number, height: number) => void
   devicePixelRatio?: number
   allowCreateMarks?: boolean
+  highlighterColor?: MarkColor
+  highlighterWidth?: number
 }) {
   const [pageSize, setPageSize] = useState({ width: 0, height: 0 })
   const z = zoomFactor > 0 ? zoomFactor : 1
@@ -139,10 +153,12 @@ function PageBlock({
               pageWidth={pageSize.width}
               pageHeight={pageSize.height}
               mode={mode}
+              color={highlighterColor}
+              strokeWidth={highlighterWidth}
               allowCreate={allowCreateMarks}
               selectedMarkId={selectedMarkId}
               onSelectMark={onSelectMark}
-              onCreate={(rect) => onCreateMark(pageNumber, rect)}
+              onCreate={(stroke) => onCreateMark(pageNumber, stroke)}
               onUpdateGeometry={onUpdateGeometry}
               onDelete={onDeleteMark}
               onToggleStudy={onToggleStudy}
@@ -180,6 +196,8 @@ export function PdfViewer({
   onPdfJsDocument,
   devicePixelRatio,
   allowCreateMarks = true,
+  highlighterColor = 'yellow',
+  highlighterWidth = DEFAULT_STROKE_WIDTH,
 }: PdfViewerProps) {
   const file = useMemo(() => ({ url: fileUrl }), [fileUrl])
   const [docPages, setDocPages] = useState(pageCount)
@@ -291,6 +309,8 @@ export function PdfViewer({
     onMeasured,
     devicePixelRatio,
     allowCreateMarks,
+    highlighterColor,
+    highlighterWidth,
   }
 
   return (

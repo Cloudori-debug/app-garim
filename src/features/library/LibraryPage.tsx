@@ -120,6 +120,7 @@ export function LibraryPage() {
     remove: removeDoc,
     toggleFavorite,
     move,
+    rename,
     refresh: refreshDocs,
   } = useDocuments(selectedFolderId)
   const favorites = useFavorites()
@@ -648,6 +649,7 @@ export function LibraryPage() {
                     void toggleFavorite(doc.id, !doc.isFavorite).then(() => favorites.refresh())
                   }}
                   onMove={(folderId) => void move(doc.id, folderId)}
+                  onRename={(name) => void rename(doc.id, name)}
                   onDelete={() => {
                     if (confirm(`"${doc.fileName}"을(를) 삭제할까요?`)) {
                       void removeDoc(doc.id).then(() => favorites.refresh())
@@ -992,6 +994,7 @@ function DocumentRow({
   currentFolderId,
   onToggleFavorite,
   onMove,
+  onRename,
   onDelete,
 }: {
   doc: Document
@@ -999,11 +1002,37 @@ function DocumentRow({
   currentFolderId: string
   onToggleFavorite: () => void
   onMove: (folderId: string) => void
+  onRename: (name: string) => void
   onDelete: () => void
 }) {
   const [moving, setMoving] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [draft, setDraft] = useState('')
   const [targetId, setTargetId] = useState('')
+  const renameRef = useRef<HTMLInputElement>(null)
   const targets = folders.filter((f) => f.id !== currentFolderId)
+
+  useEffect(() => {
+    if (!renaming) return
+    renameRef.current?.focus()
+    renameRef.current?.select()
+  }, [renaming])
+
+  const startRename = () => {
+    setMoving(false)
+    setDraft(doc.fileName.replace(/\.pdf$/i, ''))
+    setRenaming(true)
+  }
+
+  const submitRename = () => {
+    const name = draft.trim()
+    if (!name) {
+      setRenaming(false)
+      return
+    }
+    onRename(name)
+    setRenaming(false)
+  }
 
   const confirmMove = () => {
     if (!targetId) return
@@ -1014,43 +1043,75 @@ function DocumentRow({
 
   return (
     <li className="rounded-lg px-2 py-2 hover:bg-[var(--border)]/50">
-      <div className="flex items-center gap-2">
-        <Link
-          to={`/read/${doc.id}`}
-          className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--ink)] hover:underline"
-        >
-          {doc.fileName}
-        </Link>
-        {(doc.pageLayout ?? 'portrait') === 'landscape' && (
-          <span className="shrink-0 rounded bg-[var(--accent-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
-            가로
-          </span>
-        )}
-        <span className="text-xs text-[var(--muted)]">{doc.pageCount}p</span>
-        <Button size="icon" variant="ghost" title="즐겨찾기" onClick={onToggleFavorite}>
-          <Star
-            className={cn(
-              'h-4 w-4',
-              doc.isFavorite ? 'fill-amber-400 text-amber-500' : 'text-[var(--muted)]',
-            )}
+      {renaming ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            ref={renameRef}
+            value={draft}
+            aria-label="PDF 이름"
+            className="h-8 min-w-0 flex-1"
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                submitRename()
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                setRenaming(false)
+              }
+            }}
           />
-        </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          title="다른 폴더로 이동"
-          disabled={targets.length === 0}
-          onClick={() => {
-            setMoving((v) => !v)
-            setTargetId(targets[0]?.id ?? '')
-          }}
-        >
-          <FolderInput className="h-4 w-4 text-[var(--muted)]" />
-        </Button>
-        <Button size="icon" variant="ghost" title="삭제" onClick={onDelete}>
-          <Trash2 className="h-4 w-4 text-[var(--muted)]" />
-        </Button>
-      </div>
+          <Button size="sm" onClick={submitRename} disabled={!draft.trim()}>
+            저장
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setRenaming(false)}>
+            취소
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/read/${doc.id}`}
+            className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--ink)] hover:underline"
+          >
+            {doc.fileName}
+          </Link>
+          {(doc.pageLayout ?? 'portrait') === 'landscape' && (
+            <span className="shrink-0 rounded bg-[var(--accent-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
+              가로
+            </span>
+          )}
+          <span className="text-xs text-[var(--muted)]">{doc.pageCount}p</span>
+          <Button size="icon" variant="ghost" title="이름 바꾸기" onClick={startRename}>
+            <Pencil className="h-4 w-4 text-[var(--muted)]" />
+          </Button>
+          <Button size="icon" variant="ghost" title="즐겨찾기" onClick={onToggleFavorite}>
+            <Star
+              className={cn(
+                'h-4 w-4',
+                doc.isFavorite ? 'fill-amber-400 text-amber-500' : 'text-[var(--muted)]',
+              )}
+            />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            title="다른 폴더로 이동"
+            disabled={targets.length === 0}
+            onClick={() => {
+              setRenaming(false)
+              setMoving((v) => !v)
+              setTargetId(targets[0]?.id ?? '')
+            }}
+          >
+            <FolderInput className="h-4 w-4 text-[var(--muted)]" />
+          </Button>
+          <Button size="icon" variant="ghost" title="삭제" onClick={onDelete}>
+            <Trash2 className="h-4 w-4 text-[var(--muted)]" />
+          </Button>
+        </div>
+      )}
 
       {moving && (
         <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-2">

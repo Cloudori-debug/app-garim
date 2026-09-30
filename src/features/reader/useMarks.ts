@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import * as markRepo from '@/entities/mark/repository'
-import type { Mark, MarkColor } from '@/entities/mark/types'
+import type { MarkGeometry } from '@/entities/mark/repository'
+import type { Mark, MarkColor, MarkPoint } from '@/entities/mark/types'
 
 export function useMarks(documentId: string | undefined) {
   const [marks, setMarks] = useState<Mark[]>([])
@@ -28,11 +29,9 @@ export function useMarks(documentId: string | undefined) {
   const create = useCallback(
     async (params: {
       page: number
-      x: number
-      y: number
-      w: number
-      h: number
       color: MarkColor
+      points: MarkPoint[]
+      strokeWidth: number
     }) => {
       if (!documentId) return null
       const mark = await markRepo.createMark({ documentId, ...params })
@@ -43,8 +42,8 @@ export function useMarks(documentId: string | undefined) {
   )
 
   const updateGeometry = useCallback(
-    async (id: string, rect: { x: number; y: number; w: number; h: number }) => {
-      await markRepo.updateMarkGeometry(id, rect)
+    async (id: string, geo: MarkGeometry) => {
+      await markRepo.updateMarkGeometry(id, geo)
       await refresh()
     },
     [refresh],

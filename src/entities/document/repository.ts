@@ -118,6 +118,22 @@ export async function listHiddenPages(): Promise<HiddenPageItem[]> {
   return items
 }
 
+export function normalizePdfFileName(name: string): string | null {
+  const trimmed = name.trim().replace(/[/\\]/g, '')
+  if (!trimmed) return null
+  const base = trimmed.replace(/\.pdf$/i, '')
+  if (!base) return null
+  return `${base}.pdf`
+}
+
+export async function renameDocument(id: string, fileName: string): Promise<void> {
+  const next = normalizePdfFileName(fileName)
+  if (!next) return
+  const doc = await db.documents.get(id)
+  if (!doc || doc.fileName === next) return
+  await db.documents.update(id, { fileName: next, updatedAt: nowIso() })
+}
+
 export async function moveDocument(id: string, folderId: string): Promise<void> {
   const doc = await db.documents.get(id)
   if (!doc) return

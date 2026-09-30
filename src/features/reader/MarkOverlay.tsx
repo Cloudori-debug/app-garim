@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 
-import type { Mark } from '@/entities/mark/types'
-import { MarkBox } from '@/features/reader/MarkBox'
+import type { MarkGeometry } from '@/entities/mark/repository'
+import type { Mark, MarkColor, MarkPoint } from '@/entities/mark/types'
+import { MarkStroke } from '@/features/reader/MarkStroke'
 import type { ReaderMode } from '@/features/reader/types'
+import { clientPointToNorm } from '@/shared/lib/geometry'
 import {
-  clientPointToNorm,
-  clampNormRect,
-  isValidMarkSize,
-  normRectFromDrag,
-  resizeNormRect,
-  type ResizeHandle,
-} from '@/shared/lib/geometry'
+  appendStrokePoint,
+  geometryFromStroke,
+  isValidStroke,
+  markStroke,
+  pointsToPath,
+  translateStroke,
+} from '@/shared/lib/stroke'
 
 interface MarkOverlayProps {
   marks: Mark[]
@@ -18,34 +20,35 @@ interface MarkOverlayProps {
   pageWidth: number
   pageHeight: number
   mode: ReaderMode
+  color: MarkColor
+  strokeWidth: number
   /** false면 빈 페이지 드래그는 스크롤에 맡기고, 기존 가림만 만질 수 있음 */
   allowCreate?: boolean
   selectedMarkId: string | null
   onSelectMark: (id: string | null) => void
-  onCreate: (rect: { x: number; y: number; w: number; h: number }) => void
-  onUpdateGeometry: (id: string, rect: { x: number; y: number; w: number; h: number }) => void
+  onCreate: (stroke: { points: MarkPoint[]; strokeWidth: number }) => void
+  onUpdateGeometry: (id: string, geo: MarkGeometry) => void
   onDelete: (id: string) => void
   onToggleStudy: (id: string) => void
   onToggleFavorite: (id: string, isFavorite: boolean) => void
 }
 
 type DragState =
-  | { type: 'create'; start: { x: number; y: number }; current: { x: number; y: number } }
+  | { type: 'create'; points: MarkPoint[] }
   | {
       type: 'move'
       id: string
-      origin: { x: number; y: number; w: number; h: number }
-      startPointer: { x: number; y: number }
-      draft: { x: number; y: number; w: number; h: number }
+      originPoints: MarkPoint[]
+      strokeWidth: number
+      startPointer: MarkPoint
+      draft: MarkGeometry
     }
-  | {
-      type: 'resize'
-      id: string
-      handle: ResizeHandle
-      origin: { x: number; y: number; w: number; h: number }
-      startPointer: { x: number; y: number }
-      draft: { x: number; y: number; w: number; h: number }
-    }
+
+const INK: Record<MarkColor, string> = {
+  yellow: 'rgba(250, 204, 21, 0.55)',
+  red: 'rgba(248, 113, 113, 0.5)',
+  purple: 'rgba(192, 132, 252, 0.5)',
+}
 
 export function MarkOverlay({
   marks,
@@ -53,16 +56,17 @@ export function MarkOverlay({
   pageWidth,
   pageHeight,
   mode,
+  color,
+  strokeWidth,
   allowCreate = true,
   selectedMarkId,
   onSelectMark,
   onCreate,
   onUpdateGeometry,
-  onDelete: _onDelete,
+  onDelete,
   onToggleStudy,
   onToggleFavorite: _onToggleFavorite,
 }: MarkOverlayProps) {
-  void _onDelete
   void _onToggleFavorite
   const overlayRef = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -93,7 +97,7 @@ export function MarkOverlay({
   }
 
   const displayMark = (mark: Mark): Mark => {
-    if (drag && (drag.type === 'move' || drag.type === 'resize') && drag.id === mark.id) {
+    if (drag?.type === 'move' && drag.id === mark.id) {
       return { ...mark, ...drag.draft }
     }
     return mark
@@ -102,7 +106,7 @@ export function MarkOverlay({
   return (
     <div
       ref={overlayRef}
-      className={drawing ? 'absolute inset-0 touch-none' : 'absolute inset-0 pointer-events-none'}
+      className={drawing ? 'absolute inset-0 cursor-crosshair touch-none' : 'absolute inset-0 pointer-events-none'}
       style={{ width: pageWidth, height: pageHeight }}
       onPointerDown={(e) => {
         if (!drawing) return
@@ -114,29 +118,25 @@ export function MarkOverlay({
         if (e.target !== overlayRef.current) return
         const start = getNorm(e.clientX, e.clientY)
         onSelectMark(null)
-        setDrag({ type: 'create', start, current: start })
+        setDrag({ type: 'create', points: [start] })
         e.currentTarget.setPointerCapture(e.pointerId)
       }}
       onPointerMove={(e) => {
         if (!drag) return
         const point = getNorm(e.clientX, e.clientY)
         if (drag.type === 'create') {
-          setDrag({ ...drag, current: point })
+          setDrag({ type: 'create', points: appendStrokePoint(drag.points, point) })
           return
         }
         const dx = point.x - drag.startPointer.x
         const dy = point.y - drag.startPointer.y
-        const draft =
-          drag.type === 'move'
-            ? clampNormRect(drag.origin.x + dx, drag.origin.y + dy, drag.origin.w, drag.origin.h)
-            : resizeNormRect(drag.origin, drag.handle, dx, dy)
-        setDrag({ ...drag, draft })
+        const points = translateStroke(drag.originPoints, drag.strokeWidth, dx, dy)
+        setDrag({ ...drag, draft: geometryFromStroke(points, drag.strokeWidth) })
       }}
       onPointerUp={(e) => {
         if (!drag) return
         if (drag.type === 'create') {
-          const rect = normRectFromDrag(drag.start, drag.current)
-          if (isValidMarkSize(rect.w, rect.h)) onCreate(rect)
+          if (isValidStroke(drag.points)) onCreate({ points: drag.points, strokeWidth })
         } else {
           onUpdateGeometry(drag.id, drag.draft)
         }
@@ -149,7 +149,7 @@ export function MarkOverlay({
       }}
     >
       {pageMarks.map((mark) => (
-        <MarkBox
+        <MarkStroke
           key={mark.id}
           mark={displayMark(mark)}
           pageWidth={pageWidth}
@@ -159,45 +159,39 @@ export function MarkOverlay({
           onSelect={() => onSelectMark(mark.id)}
           onMoveStart={(ev) => {
             const startPointer = getNorm(ev.clientX, ev.clientY)
+            const stroke = markStroke(mark)
             setDrag({
               type: 'move',
               id: mark.id,
-              origin: { x: mark.x, y: mark.y, w: mark.w, h: mark.h },
+              originPoints: stroke.points,
+              strokeWidth: stroke.strokeWidth,
               startPointer,
-              draft: { x: mark.x, y: mark.y, w: mark.w, h: mark.h },
-            })
-            overlayRef.current?.setPointerCapture(ev.pointerId)
-          }}
-          onResizeStart={(ev, handle) => {
-            const startPointer = getNorm(ev.clientX, ev.clientY)
-            setDrag({
-              type: 'resize',
-              id: mark.id,
-              handle,
-              origin: { x: mark.x, y: mark.y, w: mark.w, h: mark.h },
-              startPointer,
-              draft: { x: mark.x, y: mark.y, w: mark.w, h: mark.h },
+              draft: geometryFromStroke(stroke.points, stroke.strokeWidth),
             })
             overlayRef.current?.setPointerCapture(ev.pointerId)
           }}
           onToggleStudy={() => onToggleStudy(mark.id)}
+          onDelete={() => onDelete(mark.id)}
           pointerActive={drawing}
         />
       ))}
 
-      {drag?.type === 'create' && (
-        <div
-          className="pointer-events-none absolute border border-dashed border-neutral-800 bg-neutral-900/20"
-          style={(() => {
-            const r = normRectFromDrag(drag.start, drag.current)
-            return {
-              left: r.x * pageWidth,
-              top: r.y * pageHeight,
-              width: r.w * pageWidth,
-              height: r.h * pageHeight,
-            }
-          })()}
-        />
+      {drag?.type === 'create' && drag.points.length > 0 && (
+        <svg
+          className="pointer-events-none absolute inset-0"
+          width={pageWidth}
+          height={pageHeight}
+          viewBox={`0 0 ${pageWidth} ${pageHeight}`}
+        >
+          <path
+            d={pointsToPath(drag.points, pageWidth, pageHeight)}
+            fill="none"
+            stroke={INK[color]}
+            strokeWidth={Math.max(4, strokeWidth * pageHeight)}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       )}
     </div>
   )

@@ -7,11 +7,36 @@ import * as markRepo from '@/entities/mark/repository'
 import type { MarkColor } from '@/entities/mark/types'
 import { SAMPLE_PDF_NAME } from '@/shared/lib/appMeta'
 
-/** PDF 페이지 위 정규화 좌표 — 캔버스에 그린 답란과 동일 */
-const SAMPLE_MARKS: { x: number; y: number; w: number; h: number; color: MarkColor }[] = [
-  { x: 0.1, y: 0.286, w: 0.8, h: 0.07, color: 'yellow' },
-  { x: 0.1, y: 0.486, w: 0.8, h: 0.07, color: 'red' },
-  { x: 0.1, y: 0.686, w: 0.8, h: 0.07, color: 'purple' },
+/** PDF 페이지 위 정규화 좌표 — 답란을 가로지르는 형광펜 */
+const SAMPLE_MARKS: {
+  points: { x: number; y: number }[]
+  strokeWidth: number
+  color: MarkColor
+}[] = [
+  {
+    points: [
+      { x: 0.1, y: 0.321 },
+      { x: 0.9, y: 0.321 },
+    ],
+    strokeWidth: 0.07,
+    color: 'yellow',
+  },
+  {
+    points: [
+      { x: 0.1, y: 0.521 },
+      { x: 0.9, y: 0.521 },
+    ],
+    strokeWidth: 0.07,
+    color: 'red',
+  },
+  {
+    points: [
+      { x: 0.1, y: 0.721 },
+      { x: 0.9, y: 0.721 },
+    ],
+    strokeWidth: 0.07,
+    color: 'purple',
+  },
 ]
 
 const BLOCKS = [

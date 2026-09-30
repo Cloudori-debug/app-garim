@@ -6,9 +6,10 @@ import type { Folder } from '@/entities/folder/types'
 import type { Mark } from '@/entities/mark/types'
 import type { PageFavorite } from '@/entities/pageFavorite/types'
 import type { ReviewState } from '@/entities/review/types'
+import { legacyStrokeFromRect, strokeBounds } from '@/shared/lib/stroke'
 
 export const DB_NAME = 'AmgiNote'
-export const DB_VERSION = 5
+export const DB_VERSION = 6
 
 class AmgiNoteDatabase extends Dexie {
   folders!: EntityTable<Folder, 'id'>
@@ -99,6 +100,29 @@ class AmgiNoteDatabase extends Dexie {
           if (!Array.isArray(d.hiddenPages)) {
             await tx.table('documents').update(d.id, { hiddenPages: [] })
           }
+        }
+      })
+    this.version(6)
+      .stores({
+        folders: 'id, parentId, sortOrder, updatedAt',
+        documents: 'id, folderId, blobId, isFavorite, pageLayout, updatedAt',
+        pdfBlobs: 'id, createdAt',
+        marks: 'id, documentId, page, isFavorite, updatedAt',
+        appState: 'id',
+        reviewStates: 'id, markId, documentId, dueAt, updatedAt',
+        pageFavorites: 'id, documentId, page, createdAt',
+      })
+      .upgrade(async (tx) => {
+        const marks = await tx.table('marks').toArray()
+        for (const m of marks) {
+          if (Array.isArray(m.points) && m.points.length > 0) continue
+          const stroke = legacyStrokeFromRect(m)
+          const box = strokeBounds(stroke.points, stroke.strokeWidth)
+          await tx.table('marks').update(m.id, {
+            points: stroke.points,
+            strokeWidth: stroke.strokeWidth,
+            ...box,
+          })
         }
       })
   }
